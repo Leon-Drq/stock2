@@ -1,0 +1,247 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Pure-white palette — Jobs-era restraint, no warm cast, maximum legibility */
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f7;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f5f5f7;
+  --muted-foreground: #6e6e73;
+  --accent: #f5f5f7;
+  --accent-foreground: #0a0a0a;
+  --destructive: #b8332a;
+  --destructive-foreground: #ffffff;
+  --border: #e5e5e7;
+  --input: #e5e5e7;
+  --ring: #0a0a0a;
+
+  /* Neutral ink ladder (Apple-grade contrast) */
+  --ink: #0a0a0a;
+  --ink-soft: #1d1d1f;
+  --ink-muted: #6e6e73;
+  --ink-faint: #a1a1a6;
+  --paper: #ffffff;
+  --paper-warm: #fafafa;       /* card surface */
+  --paper-cool: #f5f5f7;       /* nested surface */
+  --rule: #e5e5e7;
+  --rule-soft: #f0f0f2;
+
+  /* Chinese convention: red = up, green = down. Muted, editorial. */
+  --bull: #b8332a;
+  --bull-soft: #d97863;
+  --bear: #2d6b4f;
+  --bear-soft: #6a9682;
+  --neutral: #8a7a55;
+  --warning: #b87a3a;
+
+  /* Health status palette — universal traffic-light semantics, decoupled from stock direction */
+  --health-ok: #4f7a5a;       /* 深橄榄绿：正常 */
+  --health-ok-soft: #8aac95;
+  --health-warn: #c8923a;     /* 琥珀：降级 / 限速 */
+  --health-warn-soft: #d9b270;
+  --health-bad: #b8332a;      /* 朱红：中断 */
+  --health-bad-soft: #d97863;
+  --health-mute: #9a9588;     /* 灰：未知 */
+
+  /* Signal palette for radar dots — desaturated */
+  --signal-green: #5a7a4f;
+  --signal-yellow: #c9a14a;
+  --signal-blue: #4a6b8a;
+  --signal-purple: #7a5a7a;
+  --signal-orange: #b87a3a;
+  --signal-red: #b8332a;
+
+  --radius: 0.125rem;
+}
+
+.dark {
+  --background: #14130f;
+  --foreground: #e8e5db;
+  --card: #14130f;
+  --card-foreground: #e8e5db;
+  --popover: #14130f;
+  --popover-foreground: #e8e5db;
+  --primary: #e8e5db;
+  --primary-foreground: #14130f;
+  --secondary: #232118;
+  --secondary-foreground: #e8e5db;
+  --muted: #232118;
+  --muted-foreground: #9a9588;
+  --accent: #2a281f;
+  --accent-foreground: #e8e5db;
+  --border: #2a281f;
+  --input: #2a281f;
+  --ring: #e8e5db;
+
+  --ink: #e8e5db;
+  --ink-soft: #c4c0b3;
+  --ink-muted: #9a9588;
+  --ink-faint: #6a665a;
+  --paper: #14130f;
+  --paper-warm: #1c1a14;
+  --rule: #2a281f;
+  --rule-soft: #232118;
+}
+
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-paper: var(--paper);
+  --color-paper-warm: var(--paper-warm);
+  --color-paper-cool: var(--paper-cool);
+  --color-rule: var(--rule);
+  --color-rule-soft: var(--rule-soft);
+  --color-bull: var(--bull);
+  --color-bull-soft: var(--bull-soft);
+  --color-bear: var(--bear);
+  --color-bear-soft: var(--bear-soft);
+  --color-neutral: var(--neutral);
+  --color-warning: var(--warning);
+  --color-signal-green: var(--signal-green);
+  --color-signal-yellow: var(--signal-yellow);
+  --color-signal-blue: var(--signal-blue);
+  --color-signal-purple: var(--signal-purple);
+  --color-signal-orange: var(--signal-orange);
+  --color-signal-red: var(--signal-red);
+  --color-health-ok: var(--health-ok);
+  --color-health-ok-soft: var(--health-ok-soft);
+  --color-health-warn: var(--health-warn);
+  --color-health-warn-soft: var(--health-warn-soft);
+  --color-health-bad: var(--health-bad);
+  --color-health-bad-soft: var(--health-bad-soft);
+  --color-health-mute: var(--health-mute);
+
+  --radius-sm: 0;
+  --radius-md: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+}
+
+@layer base {
+  html {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    max-width: 100%;
+    overflow-x: hidden;
+    font-feature-settings: "kern", "liga", "calt";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    touch-action: manipulation;
+  }
+
+  /* Editorial heading rhythm */
+  h1, h2, h3, h4 {
+    font-feature-settings: "kern", "liga", "calt", "ss01";
+    letter-spacing: 0;
+  }
+
+  /* Tabular numerals for prices, percentages */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "lnum";
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+  }
+
+  .recharts-wrapper,
+  .recharts-surface {
+    max-width: 100% !important;
+  }
+}
+
+/* Removed paper texture — keeping class as no-op for backward compat */
+.paper-texture {
+  background-image: none;
+}
+
+/* Drop cap for editorial flair */
+.drop-cap::first-letter {
+  font-family: var(--font-display);
+  font-size: 3.5em;
+  line-height: 0.9;
+  float: left;
+  margin-right: 0.08em;
+  margin-top: 0.05em;
+  font-weight: 500;
+}
+
+/* Rule mark — small dot separator */
+.rule-dot::before {
+  content: "·";
+  display: inline-block;
+  margin: 0 0.5em;
+  color: var(--ink-faint);
+}

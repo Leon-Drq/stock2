@@ -1,0 +1,28 @@
+{
+  "crons": [
+    {
+      "path": "/api/radar/cron",
+      "schedule": "*/5 1-6 * * 1-5"
+    },
+    {
+      "path": "/api/radar/track",
+      "schedule": "*/3 1-7 * * 1-5"
+    },
+    {
+      "path": "/api/paper-trading/cron",
+      "schedule": "5-59/10 1-7 * * 1-5"
+    },
+    {
+      "path": "/api/backtest-data/cron",
+      "schedule": "*/15 7-15 * * 1-5"
+    },
+    {
+      "path": "/api/strategy-miner/cron",
+      "schedule": "30 8 * * 0"
+    },
+    {
+      "path": "/api/backtest/jobs/cron",
+      "schedule": "15 9 * * 1-5"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+export const PAPER_CONFLUENCE_STRATEGY_ID = "paper-confluence"
+export const PAPER_CONFLUENCE_STRATEGY_NAME = "多策略共振"
+export const PAPER_CONFLUENCE_ADMISSION_STATUS = "共振模拟"
+export const PAPER_CONFLUENCE_ADMISSION_SCORE = 88
