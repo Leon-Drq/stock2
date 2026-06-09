@@ -31,11 +31,11 @@ export function DataTrustSection() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  async function load() {
+  async function load(realtime = false) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/data-quality/status", { cache: "no-store" })
+      const res = await fetch(realtime ? "/api/data-quality/status?realtime=1" : "/api/data-quality/status", { cache: "no-store" })
       const json = (await res.json()) as DataQualityResponse
       if (!res.ok || !json.ok) throw new Error(`HTTP ${res.status}`)
       setSnapshot(json)
@@ -96,7 +96,7 @@ export function DataTrustSection() {
           </div>
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => void load(true)}
             disabled={loading}
             className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-ink-faint disabled:opacity-50"
           >

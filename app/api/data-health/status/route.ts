@@ -4,8 +4,9 @@ import { getHealthReport } from "@/lib/data-health"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-export async function GET() {
-  const report = await getHealthReport()
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const report = await getHealthReport({ probe: url.searchParams.get("probe") === "1" })
   const maxAge = report.rateLimitedCount > 0 ? 60 : 300
   return NextResponse.json(
     { ok: true, report },

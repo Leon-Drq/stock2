@@ -33,7 +33,7 @@ export function DataHealthClientSection() {
       if (refresh) {
         await fetch("/api/data-health/refresh", { method: "POST" })
       }
-      const statusUrl = refresh ? `/api/data-health/status?refresh=${Date.now()}` : "/api/data-health/status"
+      const statusUrl = refresh ? `/api/data-health/status?probe=1&refresh=${Date.now()}` : "/api/data-health/status"
       const res = await fetch(statusUrl)
       const json = (await res.json()) as StatusResponse
       if (!res.ok || !json.ok || !json.report) throw new Error(json.error ?? `HTTP ${res.status}`)

@@ -306,7 +306,7 @@ function sleep(ms: number) {
  * 限速策略：每批 3 个并发 + 批间隔 2.5s，12 个 source 总耗时 ~10s。
  * 由于 probeOne 内置 5 分钟缓存，正常访问几乎不会真打 Qveris。
  */
-export async function getHealthReport(): Promise<HealthReport> {
+export async function getHealthReport(options: { probe?: boolean } = {}): Promise<HealthReport> {
   const checkedAt = new Date().toISOString()
   const apiKeyConfigured = Boolean(process.env.QVERIS_API_KEY)
 
@@ -344,6 +344,33 @@ export async function getHealthReport(): Promise<HealthReport> {
     }
   }
 
+  if (!options.probe) {
+    const items = DATA_SOURCES.map((source) => {
+      const cached = cache.get(source.id)?.health
+      return cached ?? {
+        source,
+        status: "unknown" as const,
+        sampledCount: 0,
+        sampleLimit: SAMPLE_LIMIT,
+        toolCount: 0,
+        topTools: [],
+        avgSuccessRate: null,
+        avgLatencyMs: null,
+        checkedAt,
+        error: "等待手动刷新探活",
+        issues: buildIssues({
+          source,
+          status: "unknown",
+          tools: [],
+          avgSuccessRate: null,
+          avgLatencyMs: null,
+          error: "等待手动刷新探活",
+        }),
+      }
+    })
+    return buildReport(checkedAt, true, items)
+  }
+
   const items: DataSourceHealth[] = []
   const batchSize = 4
   for (let i = 0; i < DATA_SOURCES.length; i += batchSize) {
@@ -352,9 +379,13 @@ export async function getHealthReport(): Promise<HealthReport> {
     items.push(...(await Promise.all(batch.map(probeOne))))
   }
 
+  return buildReport(checkedAt, true, items)
+}
+
+function buildReport(checkedAt: string, apiKeyConfigured: boolean, items: DataSourceHealth[]): HealthReport {
   return {
     checkedAt,
-    apiKeyConfigured: true,
+    apiKeyConfigured,
     totalSources: items.length,
     healthyCount: items.filter((i) => i.status === "healthy").length,
     degradedCount: items.filter((i) => i.status === "degraded").length,
