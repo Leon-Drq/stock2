@@ -29,7 +29,7 @@ export default async function OpsPage() {
       />
       <AiModelRuntimeCard />
       <StrategyRuntimeDashboard snapshot={snapshot} />
-      <CronControlPanel />
+      <CronControlPanel showSessionActions={false} />
     </PageShell>
   )
 }

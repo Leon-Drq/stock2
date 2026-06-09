@@ -36,7 +36,7 @@ type CronJob = {
 
 type Drafts = Record<string, Pick<CronJob, "cron_expr" | "enabled" | "run_on_enable">>
 
-export function CronControlPanel() {
+export function CronControlPanel({ showSessionActions = true }: { showSessionActions?: boolean }) {
   const [user, setUser] = useState<User | null>(null)
   const [jobs, setJobs] = useState<CronJob[]>([])
   const [drafts, setDrafts] = useState<Drafts>({})
@@ -191,9 +191,12 @@ export function CronControlPanel() {
         <div>
           <div className="flex items-center gap-2 font-mono text-[11px] text-ink-muted">
             <ShieldCheck className="size-4" aria-hidden />
-            {user.email}
+            APScheduler
           </div>
-          <h2 className="mt-1 text-[20px] font-semibold text-ink">APScheduler 任务</h2>
+          <h2 className="mt-1 text-[20px] font-semibold text-ink">定时任务调度</h2>
+          <p className="mt-1 max-w-[780px] text-[12px] leading-5 text-ink-muted">
+            保存配置会写入 cron 表达式、启停状态和启用后立即运行选项；立即运行只插入一次手动执行队列，不会改变任务配置。
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">{enabledCount} enabled</Badge>
@@ -201,10 +204,12 @@ export function CronControlPanel() {
             <RefreshCw className="size-4" aria-hidden />
             刷新
           </Button>
-          <Button variant="outline" size="sm" onClick={logout}>
-            <LogOut className="size-4" aria-hidden />
-            注销
-          </Button>
+          {showSessionActions && (
+            <Button variant="outline" size="sm" onClick={logout}>
+              <LogOut className="size-4" aria-hidden />
+              注销登录
+            </Button>
+          )}
         </div>
       </div>
 
@@ -254,11 +259,11 @@ export function CronControlPanel() {
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => runJob(job)} disabled={saving}>
                       <Play className="size-4" aria-hidden />
-                      执行
+                      立即运行
                     </Button>
                     <Button size="sm" onClick={() => saveJob(job)} disabled={saving}>
                       {saving ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Save className="size-4" aria-hidden />}
-                      保存
+                      保存配置
                     </Button>
                   </div>
                 </TableCell>
