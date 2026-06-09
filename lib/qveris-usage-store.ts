@@ -145,6 +145,7 @@ type TotalsRow = {
 const TABLE = "qveris_usage_ledger"
 const DEFAULT_LOG_TIMEOUT_MS = 900
 let tableReady = false
+let lastTableError: string | undefined
 
 export async function recordQverisUsage(input: RecordUsageInput) {
   if (!hasSharedPostgresConfig()) return false
@@ -179,9 +180,9 @@ export async function getQverisUsageSummary({
       from,
       to,
       "Qveris 用量账本暂未就绪；这不影响数据源目录和 Qveris 工具调用。请确认 Python API 服务已启动并完成数据库迁移。",
-      undefined,
+      lastTableError,
       true,
-      "fallback",
+      lastTableError ? "error" : "fallback",
     )
   }
 
@@ -311,12 +312,14 @@ async function ensureQverisUsageTable() {
     try {
       await checkQverisUsageTableSchema(sql)
       tableReady = true
+      lastTableError = undefined
       return true
     } catch (error) {
       if (isUndefinedColumn(error)) {
         await ensureQverisUsageTableMigrations(sql)
         await checkQverisUsageTableSchema(sql)
         tableReady = true
+        lastTableError = undefined
         return true
       }
       if (!isUndefinedTable(error)) throw error
@@ -354,8 +357,10 @@ async function ensureQverisUsageTable() {
     await sql`create index if not exists qveris_usage_ledger_tool_idx on qveris_usage_ledger (tool_id, created_at desc)`
     await ensureBackendRls(sql, [TABLE])
     tableReady = true
+    lastTableError = undefined
     return true
   } catch (error) {
+    lastTableError = errorMessageFrom(error)
     console.warn("[qveris-usage-store] usage ledger initialization failed", error)
     return false
   }

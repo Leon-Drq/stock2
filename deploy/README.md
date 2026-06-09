@@ -19,6 +19,8 @@ chmod +x start.sh stop.sh
 
 `start.sh` creates `deploy/.env` from `deploy/env/compose.env.sample` if it is missing, pulls the latest configured images, creates `deploy/stockdb`, and starts the services.
 
+If `deploy/.env` already exists, `start.sh` appends any new keys added to `deploy/env/compose.env.sample` without overwriting your existing passwords, tokens, or API keys.
+
 ## Build Images Locally
 
 On a Linux machine with the source code:
@@ -47,6 +49,8 @@ Open:
 - Web: http://localhost:3000
 - Cron configuration: http://localhost:3000/ops/cron
 - API health: http://localhost:8000/healthz
+- Model runtime check: http://localhost:3000/api/model/runtime
+- Qveris usage ledger check: http://localhost:3000/api/qveris/usage
 
 Web page access is protected by default:
 
@@ -90,6 +94,16 @@ Supported provider/model examples:
 - `qwen`: `qwen-plus`, `qwen-max`, `qwen-turbo`
 
 `MODEL_PROVIDER_KEY` is the preferred single key variable for the selected default provider. Legacy provider-specific variables such as `DEEPSEEK_API_KEY` and `OPENAI_API_KEY` remain supported as fallback.
+
+The model key must be available to `stock2-web`, because the current AI routes are implemented in Next.js server routes. Setting the key only on `stock2-api` is not enough.
+
+For the bundled Docker Compose PostgreSQL service, keep:
+
+```env
+POSTGRES_SSL=false
+```
+
+Hosted databases such as Supabase/Neon can set `POSTGRES_SSL=true` or include `sslmode=require` in the connection URL.
 
 PostgreSQL 18+ requires the bind mount to be placed at `/var/lib/postgresql`, not `/var/lib/postgresql/data`. If you previously started with the old mount and have no production data yet, reset the local database directory before restarting:
 

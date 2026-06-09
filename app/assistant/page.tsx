@@ -6,6 +6,8 @@ export const metadata = {
   title: "AI 助手 — Stock Radar",
 }
 
+export const dynamic = "force-dynamic"
+
 const EXAMPLES = [
   "找出最近三天放量突破年线、且北向加仓的票",
   "买入超跌反弹的策略，止损放在前低，胜率最大化",

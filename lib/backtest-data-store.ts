@@ -1515,9 +1515,38 @@ async function getPostgresClient() {
     idle_timeout: 20,
     connect_timeout: 10,
     prepare: false,
-    ssl: /localhost|127\.0\.0\.1/.test(config.url) ? false : "require",
+    ssl: postgresSslOption(config.url),
   })
   return postgresClient
+}
+
+function postgresSslOption(databaseUrl: string): false | "require" {
+  const explicit = process.env.POSTGRES_SSL ?? process.env.DATABASE_SSL
+  if (explicit) {
+    const normalized = explicit.trim().toLowerCase()
+    if (["0", "false", "disable", "disabled", "no"].includes(normalized)) return false
+    if (["1", "true", "require", "required", "yes"].includes(normalized)) return "require"
+  }
+
+  try {
+    const url = new URL(databaseUrl)
+    const sslMode = url.searchParams.get("sslmode")?.toLowerCase()
+    if (sslMode === "disable") return false
+    if (sslMode && sslMode !== "prefer") return "require"
+    return isInternalPostgresHost(url.hostname) ? false : "require"
+  } catch {
+    return /localhost|127\.0\.0\.1|postgres/i.test(databaseUrl) ? false : "require"
+  }
+}
+
+function isInternalPostgresHost(hostname: string) {
+  const host = hostname.toLowerCase().replace(/^\[/, "").replace(/\]$/, "")
+  if (["localhost", "127.0.0.1", "::1", "postgres", "stock2-postgres"].includes(host)) return true
+  if (host.endsWith(".local")) return true
+  if (/^10\./.test(host)) return true
+  if (/^192\.168\./.test(host)) return true
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return true
+  return false
 }
 
 function postgresPoolMax() {

@@ -15,6 +15,25 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   cp "${SCRIPT_DIR}/env/compose.env.sample" "${ENV_FILE}"
   echo "Created ${ENV_FILE} from env/compose.env.sample."
   echo "Review passwords and tokens before using this deployment in production." >&2
+else
+  missing_keys=0
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    [[ "${line}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
+    key="${line%%=*}"
+    if ! grep -Eq "^${key}=" "${ENV_FILE}"; then
+      if [[ "${missing_keys}" -eq 0 ]]; then
+        {
+          echo
+          echo "# Added by start.sh from env/compose.env.sample on $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        } >> "${ENV_FILE}"
+      fi
+      echo "${line}" >> "${ENV_FILE}"
+      missing_keys=$((missing_keys + 1))
+    fi
+  done < "${SCRIPT_DIR}/env/compose.env.sample"
+  if [[ "${missing_keys}" -gt 0 ]]; then
+    echo "Added ${missing_keys} missing settings to ${ENV_FILE}. Review newly added values if needed."
+  fi
 fi
 
 mkdir -p "${DB_DIR}"

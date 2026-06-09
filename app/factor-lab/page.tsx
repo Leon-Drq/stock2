@@ -10,6 +10,8 @@ export const metadata = {
   title: "因子实验台 — Stock Radar",
 }
 
+export const dynamic = "force-dynamic"
+
 export default function FactorLabPage() {
   const assets = buildFactorAssets(FACTORS)
   const summary = factorAssetSummary(assets)
