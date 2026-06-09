@@ -8,6 +8,10 @@ __v0_jsx-dev-runtime.ts
 
 # Environment variables
 .env*.local
+deploy/.env
+
+# Local Docker data
+deploy/stockdb/
 
 # Common ignores
 node_modules

@@ -11,7 +11,9 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - stock2-postgres-data:/var/lib/postgresql/data
+      - ./stockdb:/var/lib/postgresql/data
+    networks:
+      - stock2-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stock2} -d ${POSTGRES_DB:-stock2}"]
       interval: 10s
@@ -19,10 +21,7 @@ services:
       retries: 10
 
   stock2-api:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.api
-    image: stock2-api:release-test
+    image: ${STOCK2_API_IMAGE:-ghcr.io/leon-drq/stock2-api:release-test}
     container_name: stock2-api
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-stock2}:${POSTGRES_PASSWORD:-stock2}@postgres:5432/${POSTGRES_DB:-stock2}
@@ -38,6 +37,8 @@ services:
         condition: service_healthy
     ports:
       - "${API_PORT:-8000}:8000"
+    networks:
+      - stock2-net
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
       interval: 10s
@@ -45,11 +46,8 @@ services:
       retries: 10
 
   stock2-scheduler:
-    image: stock2-api:release-test
+    image: ${STOCK2_API_IMAGE:-ghcr.io/leon-drq/stock2-api:release-test}
     container_name: stock2-scheduler
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.api
     command: ["python", "-m", "app.scheduler_worker"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-stock2}:${POSTGRES_PASSWORD:-stock2}@postgres:5432/${POSTGRES_DB:-stock2}
@@ -62,12 +60,11 @@ services:
         condition: service_healthy
       stock2-web:
         condition: service_started
+    networks:
+      - stock2-net
 
   stock2-web:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.web
-    image: stock2-web:release-test
+    image: ${STOCK2_WEB_IMAGE:-ghcr.io/leon-drq/stock2-web:release-test}
     container_name: stock2-web
     environment:
       NODE_ENV: production
@@ -75,6 +72,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-stock2}:${POSTGRES_PASSWORD:-stock2}@postgres:5432/${POSTGRES_DB:-stock2}
       QVERIS_API_KEY: ${QVERIS_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEFAULT_MODEL_PROVIDER: ${DEFAULT_MODEL_PROVIDER:-}
+      DEFAULT_MODEL_BASE_URL: ${DEFAULT_MODEL_BASE_URL:-}
+      DEFAULT_MODEL_NAME: ${DEFAULT_MODEL_NAME:-}
       CRON_SECRET: ${INTERNAL_CRON_TOKEN:-change-me}
       PYTHON_API_URL: http://stock2-api:8000
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me}
@@ -83,6 +84,12 @@ services:
         condition: service_healthy
     ports:
       - "${WEB_PORT:-3000}:3000"
+    networks:
+      - stock2-net
 
-volumes:
-  stock2-postgres-data:
+networks:
+  stock2-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${STOCK2_NETWORK_SUBNET:-10.15.11.0/24}
