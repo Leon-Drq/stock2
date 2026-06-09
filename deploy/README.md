@@ -182,6 +182,35 @@ Authorization: Bearer ${INTERNAL_CRON_TOKEN}
 
 The Next.js app maps that value to `CRON_SECRET`.
 
+## Strategy Miner
+
+The strategy miner uses two sources:
+
+- Curated internal templates such as Donchian breakout, RSI2 pullback, Bollinger reversion, MACD trend, low-volatility momentum, and Minervini trend template.
+- Optional GitHub repository search. It only reads repository metadata and converts strategy ideas into internal factor DSL; it does not execute third-party code.
+
+Optional settings:
+
+```env
+GITHUB_TOKEN=
+STRATEGY_MINER_DISABLE_GITHUB=0
+```
+
+Set `GITHUB_TOKEN` to avoid low unauthenticated GitHub API rate limits. Set `STRATEGY_MINER_DISABLE_GITHUB=1` to use curated templates only.
+
+Manual trigger:
+
+```bash
+curl -H "Authorization: Bearer ${INTERNAL_CRON_TOKEN}" \
+  "https://stock.example.com/api/strategy-miner/refresh?limit=18&githubLimit=4&immediateLimit=12"
+```
+
+Parameters:
+
+- `limit`: maximum candidates for this run, capped at 30.
+- `githubLimit`: maximum repositories per GitHub query, capped at 8.
+- `immediateLimit`: candidates to backtest immediately; the rest are queued in the registry.
+
 ## Images
 
 The GitHub Actions workflow builds:

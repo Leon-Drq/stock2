@@ -130,9 +130,113 @@ type GithubRepo = {
   license?: { spdx_id?: string | null; name?: string | null } | null
 }
 
-const GITHUB_SEARCH_QUERIES: string[] = []
+const GITHUB_SEARCH_QUERIES: string[] = [
+  "quant trading strategy stock momentum language:Python",
+  "backtrader momentum strategy language:Python",
+  "rsi mean reversion trading strategy language:Python",
+  "turtle trading donchian breakout language:Python",
+  "bollinger bands strategy backtest language:Python",
+  "macd trading strategy backtest language:Python",
+]
 
-const CURATED_TEMPLATES: CandidateTemplate[] = []
+const CURATED_TEMPLATES: CandidateTemplate[] = [
+  {
+    id: "mine-curated-donchian-breakout",
+    name: "Donchian 通道突破候选",
+    author: "Stock2 Curated",
+    desc: "从 Turtle/Donchian 公开趋势突破思想转译，优先测试 55 日通道突破、波动收缩和绝对动量过滤。",
+    factors: ["f-donchian-55", "f-atr-compression", "f-absolute-momentum"],
+    freq: "position",
+    hypothesis: "中期突破策略在 A 股需要叠加绝对动量和波动收缩，降低假突破和弱市回撤。",
+    source: {
+      kind: "curated",
+      name: "Turtle / Donchian breakout",
+      url: "https://en.wikipedia.org/wiki/Turtle_trading",
+      query: "turtle donchian breakout trend following",
+    },
+    risk: ["绝对动量过滤", "通道突破失败退出", "20 日调仓", "组合级回撤保护"],
+  },
+  {
+    id: "mine-curated-rsi2-pullback",
+    name: "RSI2 趋势回踩候选",
+    author: "Stock2 Curated",
+    desc: "从 RSI2/Connors 短线回归思想转译，只在长期趋势保护下测试超卖回补。",
+    factors: ["f-pullback-uptrend", "f-rsi2-reversal", "f-absolute-momentum"],
+    freq: "swing",
+    hypothesis: "短线超卖策略不能只看胜率，必须用长期趋势过滤和交易成本验证盈亏比。",
+    source: {
+      kind: "curated",
+      name: "RSI mean reversion",
+      url: "https://en.wikipedia.org/wiki/Relative_strength_index",
+      query: "rsi2 connors mean reversion pullback",
+    },
+    risk: ["趋势过滤", "短线回补失败即退出", "高换手降级", "弱市空仓"],
+  },
+  {
+    id: "mine-curated-bollinger-reversion",
+    name: "Bollinger 趋势回归候选",
+    author: "Stock2 Curated",
+    desc: "从布林带均值回归策略转译，先加入趋势保护，避免在下跌通道中接连续弱势。",
+    factors: ["f-bollinger-revert", "f-rsi2-reversal", "f-absolute-momentum"],
+    freq: "swing",
+    hypothesis: "布林回归策略需要重点检查极端行情回撤、交易成本和连续补跌风险。",
+    source: {
+      kind: "curated",
+      name: "Bollinger Bands",
+      url: "https://en.wikipedia.org/wiki/Bollinger_Bands",
+      query: "bollinger bands mean reversion trading strategy",
+    },
+    risk: ["趋势过滤", "极端回撤降级", "不追逐单日反弹", "亏损样本复盘"],
+  },
+  {
+    id: "mine-curated-macd-trend",
+    name: "MACD 风险调整趋势候选",
+    author: "Stock2 Curated",
+    desc: "从 MACD 趋势跟随策略转译，叠加风险调整动量和弱市空仓，减少单指标噪音。",
+    factors: ["f-macd-trend", "f-risk-adjusted-mom", "f-absolute-momentum"],
+    freq: "position",
+    hypothesis: "MACD 单因子在震荡市噪音较大，需要结合动量质量和市场状态后再进入雷达。",
+    source: {
+      kind: "curated",
+      name: "MACD trend following",
+      url: "https://en.wikipedia.org/wiki/MACD",
+      query: "macd trend following trading strategy",
+    },
+    risk: ["弱市空仓", "20 日调仓", "回撤触发降仓", "参数窗口压力测试"],
+  },
+  {
+    id: "mine-curated-low-vol-momentum",
+    name: "低波动动量候选",
+    author: "Stock2 Curated",
+    desc: "从动量投资和低波动组合思想转译，优先选择中期强势且波动受控的标的。",
+    factors: ["f-low-vol-mom", "f-mom-60d", "f-absolute-momentum"],
+    freq: "position",
+    hypothesis: "风险调整后的动量比单纯追涨更适合进入模拟盘观察，核心风险是行情急转时的回撤。",
+    source: {
+      kind: "curated",
+      name: "Momentum investing",
+      url: "https://www.investopedia.com/terms/m/momentum_investing.asp",
+      query: "risk adjusted momentum low volatility stock strategy",
+    },
+    risk: ["弱市空仓", "降低高波动拥挤股权重", "组合分散", "样本外复测"],
+  },
+  {
+    id: "mine-curated-minervini-trend",
+    name: "Minervini 趋势模板候选",
+    author: "Stock2 Curated",
+    desc: "从趋势模板选股思想转译，测试均线多头、52 周高位和放量突破后的持续性。",
+    factors: ["f-minervini-trend", "f-vol-spike", "f-absolute-momentum"],
+    freq: "position",
+    hypothesis: "强势趋势模板适合作为雷达候选源，但必须拦截高位放量失败和弱市集中回撤。",
+    source: {
+      kind: "curated",
+      name: "Trend template",
+      url: "https://www.investopedia.com/terms/m/momentum_investing.asp",
+      query: "minervini trend template stock strategy",
+    },
+    risk: ["52 周高位不过度追高", "放量突破失败退出", "弱市降仓", "单票上限"],
+  },
+]
 
 export async function runStrategyMining(options: StrategyMiningOptions = {}): Promise<StrategyMiningReport> {
   const generatedAt = new Date().toISOString()
