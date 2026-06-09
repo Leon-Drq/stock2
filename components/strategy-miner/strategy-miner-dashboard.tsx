@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Activity, ClipboardCheck, Database, ExternalLink, FlaskConical, GitBranch, ShieldCheck, TestTube2 } from "lucide-react"
+import { Activity, ClipboardCheck, Database, ExternalLink, FlaskConical, GitBranch, Settings2, ShieldCheck, TestTube2 } from "lucide-react"
 import { formatBeijingDateTime } from "@/lib/format"
 import type { StrategyMiningCandidate, StrategyMiningReport } from "@/lib/strategy-miner"
 
@@ -18,11 +18,20 @@ export function StrategyMinerDashboard({ report }: { report: StrategyMiningRepor
               只提取公开仓库和经典策略里的可解释规则，转成内部因子 DSL 后统一用 Qveris/Supabase 历史数据回测；未通过准入的候选不会进入雷达。
             </p>
           </div>
-          <span className={`rounded-[7px] border px-3 py-2 font-mono text-[11px] ${
-            report.store.persisted ? "border-rule bg-[#e7f4eb] text-health-ok" : "border-rule bg-[#fafafa] text-warning"
-          }`}>
-            {report.store.persisted ? "postgres persisted" : "not persisted"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/strategy-research/miner/settings"
+              className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-rule bg-[#fafafa] px-3 font-mono text-[11px] text-ink transition hover:bg-white"
+            >
+              <Settings2 className="size-3.5" aria-hidden />
+              配置
+            </Link>
+            <span className={`rounded-[7px] border px-3 py-2 font-mono text-[11px] ${
+              report.store.persisted ? "border-rule bg-[#e7f4eb] text-health-ok" : "border-rule bg-[#fafafa] text-warning"
+            }`}>
+              {report.store.persisted ? "postgres persisted" : "not persisted"}
+            </span>
+          </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">

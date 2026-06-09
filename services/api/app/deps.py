@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 
 from app.config import get_settings
-from app.db import pool
+from app.db import fetchrow
 from app.security import session_token_hash
 
 
@@ -19,9 +19,8 @@ async def current_user(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
-    db = await pool()
     token_hash = session_token_hash(token)
-    row = await db.fetchrow(
+    row = await fetchrow(
         """
         select u.id, u.email, u.role, u.status
         from sessions s

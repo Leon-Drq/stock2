@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Request
 
-from app.db import pool
+from app.db import fetchval
 
 router = APIRouter()
 
 
 @router.get("/healthz")
 async def healthz(request: Request) -> dict:
-    db = await pool()
-    await db.fetchval("select 1")
+    await fetchval("select 1")
     return {
         "ok": True,
         "service": "stock2-api",

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
+import { getStrategyMinerConfig } from "@/lib/strategy-miner-config"
 import { runStrategyMining } from "@/lib/strategy-miner"
 
 export const runtime = "nodejs"
@@ -11,11 +12,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   }
 
+  const config = await getStrategyMinerConfig()
   const report = await runStrategyMining({
     persist: true,
-    maxCandidates: 28,
-    githubLimitPerQuery: 5,
-    immediateBacktestLimit: 12,
+    config,
+    maxCandidates: config.maxCandidates,
+    githubLimitPerQuery: config.githubLimitPerQuery,
+    immediateBacktestLimit: config.immediateBacktestLimit,
   })
 
   return NextResponse.json({

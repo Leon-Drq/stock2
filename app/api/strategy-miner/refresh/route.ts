@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
+import { getStrategyMinerConfig } from "@/lib/strategy-miner-config"
 import { runStrategyMining } from "@/lib/strategy-miner"
 
 export const runtime = "nodejs"
@@ -12,11 +13,13 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url)
-  const limit = Math.max(4, Math.min(30, Number(url.searchParams.get("limit")) || 18))
-  const githubLimitPerQuery = Math.max(1, Math.min(8, Number(url.searchParams.get("githubLimit")) || 4))
-  const immediateBacktestLimit = Math.max(0, Math.min(limit, Number(url.searchParams.get("immediateLimit")) || Math.min(12, limit)))
+  const config = await getStrategyMinerConfig()
+  const limit = Math.max(4, Math.min(30, Number(url.searchParams.get("limit")) || config.maxCandidates))
+  const githubLimitPerQuery = Math.max(1, Math.min(8, Number(url.searchParams.get("githubLimit")) || config.githubLimitPerQuery))
+  const immediateBacktestLimit = Math.max(0, Math.min(limit, Number(url.searchParams.get("immediateLimit")) || config.immediateBacktestLimit))
   const report = await runStrategyMining({
     persist: true,
+    config,
     maxCandidates: limit,
     githubLimitPerQuery,
     immediateBacktestLimit,

@@ -1,6 +1,7 @@
 import { runStrategyBacktestReportsForStrategies, type BacktestReport } from "@/lib/backtest"
 import type { Strategy } from "@/lib/catalog"
 import { STRATEGY_CATALOG_MIN_ANNUAL_RETURN } from "@/lib/catalog"
+import { DEFAULT_STRATEGY_MINER_QUERIES, type StrategyMinerConfig } from "@/lib/strategy-miner-config"
 import { syncStrategyMiningReport, type StrategyMinerStoreResult } from "@/lib/strategy-miner-store"
 import { syncStrategyRegistryFromMiningCandidates } from "@/lib/strategy-registry-store"
 
@@ -105,6 +106,7 @@ export type StrategyMiningOptions = {
   githubLimitPerQuery?: number
   immediateBacktestLimit?: number
   persist?: boolean
+  config?: StrategyMinerConfig
 }
 
 type CandidateTemplate = {
@@ -129,15 +131,6 @@ type GithubRepo = {
   topics?: string[]
   license?: { spdx_id?: string | null; name?: string | null } | null
 }
-
-const GITHUB_SEARCH_QUERIES: string[] = [
-  "quant trading strategy stock momentum language:Python",
-  "backtrader momentum strategy language:Python",
-  "rsi mean reversion trading strategy language:Python",
-  "turtle trading donchian breakout language:Python",
-  "bollinger bands strategy backtest language:Python",
-  "macd trading strategy backtest language:Python",
-]
 
 const CURATED_TEMPLATES: CandidateTemplate[] = [
   {
@@ -240,11 +233,16 @@ const CURATED_TEMPLATES: CandidateTemplate[] = [
 
 export async function runStrategyMining(options: StrategyMiningOptions = {}): Promise<StrategyMiningReport> {
   const generatedAt = new Date().toISOString()
-  const githubLimitPerQuery = options.githubLimitPerQuery ?? 4
-  const maxCandidates = options.maxCandidates ?? 18
+  const githubLimitPerQuery = options.githubLimitPerQuery ?? options.config?.githubLimitPerQuery ?? 4
+  const maxCandidates = options.maxCandidates ?? options.config?.maxCandidates ?? 18
+  const queries = options.config?.queries ?? DEFAULT_STRATEGY_MINER_QUERIES
+  const githubEnabled = options.config?.githubEnabled ?? process.env.STRATEGY_MINER_DISABLE_GITHUB !== "1"
   const notes = miningBaseNotes()
-  const candidates = await collectStrategyMiningCandidates(generatedAt, notes, githubLimitPerQuery, maxCandidates)
-  const immediateBacktestLimit = Math.max(0, Math.min(candidates.length, options.immediateBacktestLimit ?? candidates.length))
+  const candidates = await collectStrategyMiningCandidates(generatedAt, notes, githubLimitPerQuery, maxCandidates, queries, githubEnabled)
+  const immediateBacktestLimit = Math.max(
+    0,
+    Math.min(candidates.length, options.immediateBacktestLimit ?? options.config?.immediateBacktestLimit ?? candidates.length),
+  )
   const immediateCandidates = candidates.slice(0, immediateBacktestLimit)
   const queuedCandidates = candidates.slice(immediateBacktestLimit)
 
@@ -283,13 +281,17 @@ export async function runStrategyMiningCandidateBacktest(
   const generatedAt = new Date().toISOString()
   const notes = miningBaseNotes()
   const curated = CURATED_TEMPLATES.find((template) => template.id === strategyId)
+  const githubLimitPerQuery = options.githubLimitPerQuery ?? options.config?.githubLimitPerQuery ?? 4
+  const maxCandidates = options.maxCandidates ?? options.config?.maxCandidates ?? 24
   const candidates = curated
     ? [templateToCandidate(curated, generatedAt)]
     : await collectStrategyMiningCandidates(
         generatedAt,
         notes,
-        options.githubLimitPerQuery ?? 4,
-        options.maxCandidates ?? 24,
+        githubLimitPerQuery,
+        maxCandidates,
+        options.config?.queries ?? DEFAULT_STRATEGY_MINER_QUERIES,
+        options.config?.githubEnabled ?? process.env.STRATEGY_MINER_DISABLE_GITHUB !== "1",
       )
   const candidate = candidates.find((item) => item.strategy.id === strategyId)
   if (!candidate) {
@@ -356,8 +358,10 @@ async function collectStrategyMiningCandidates(
   notes: string[],
   githubLimitPerQuery: number,
   maxCandidates: number,
+  queries: string[] = DEFAULT_STRATEGY_MINER_QUERIES,
+  githubEnabled = process.env.STRATEGY_MINER_DISABLE_GITHUB !== "1",
 ) {
-  const githubRepos = await discoverGithubRepos(githubLimitPerQuery).catch((error) => {
+  const githubRepos = await discoverGithubRepos(githubLimitPerQuery, queries, githubEnabled).catch((error) => {
     notes.push(`GitHub 搜索暂时失败：${error instanceof Error ? error.message : String(error)}。已使用内置公开策略模板继续回测。`)
     return [] as Array<{ repo: GithubRepo; query: string }>
   })
@@ -387,8 +391,8 @@ function summarizeCandidates(evaluated: StrategyMiningCandidate[]): StrategyMini
   }
 }
 
-async function discoverGithubRepos(limitPerQuery: number) {
-  if (process.env.STRATEGY_MINER_DISABLE_GITHUB === "1") return []
+async function discoverGithubRepos(limitPerQuery: number, queries: string[], githubEnabled: boolean) {
+  if (!githubEnabled || process.env.STRATEGY_MINER_DISABLE_GITHUB === "1") return []
   const token = process.env.GITHUB_TOKEN
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -397,7 +401,7 @@ async function discoverGithubRepos(limitPerQuery: number) {
   if (token) headers.Authorization = `Bearer ${token}`
 
   const out: Array<{ repo: GithubRepo; query: string }> = []
-  for (const query of GITHUB_SEARCH_QUERIES) {
+  for (const query of queries) {
     const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=${limitPerQuery}`
     const response = await fetch(url, {
       headers,

@@ -114,9 +114,13 @@ async function loadRuntimeSnapshotForPage(): Promise<StrategyRuntimeSnapshot> {
   if (!host) return loadStrategyRuntimeSnapshot()
 
   const proto = headerStore.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https")
+  const cookie = headerStore.get("cookie")
   const response = await fetch(`${proto}://${host}/api/ops`, {
     cache: "no-store",
-    headers: { accept: "application/json" },
+    headers: {
+      accept: "application/json",
+      ...(cookie ? { cookie } : {}),
+    },
   })
   if (!response.ok) throw new Error(`运行中枢 API 返回 HTTP ${response.status}`)
 

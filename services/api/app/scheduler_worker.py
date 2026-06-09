@@ -7,19 +7,18 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.config import get_settings
-from app.db import close_pool, init_pool, pool
+from app.db import close_pool, execute, fetch, fetchrow, fetchval, init_pool
 from app.migrations import run_migrations
 
 
 async def execute_job(job_id: str) -> None:
     settings = get_settings()
-    db = await pool()
-    job = await db.fetchrow("select * from cron_jobs where id = $1 and enabled = true", job_id)
+    job = await fetchrow("select * from cron_jobs where id = $1 and enabled = true", job_id)
     if not job:
         return
 
     started = datetime.now(tz=UTC)
-    run_id = await db.fetchval(
+    run_id = await fetchval(
         "insert into cron_runs (job_id, status, started_at) values ($1, 'running', $2) returning id",
         job_id,
         started,
@@ -40,7 +39,7 @@ async def execute_job(job_id: str) -> None:
         status = "exception"
         error = str(exc)[:500]
     duration_ms = int((time.perf_counter() - start) * 1000)
-    await db.execute(
+    await execute(
         """
         update cron_runs
         set status = $2, finished_at = now(), http_status = $3, error = $4, duration_ms = $5
@@ -52,7 +51,7 @@ async def execute_job(job_id: str) -> None:
         error,
         duration_ms,
     )
-    await db.execute(
+    await execute(
         """
         update cron_jobs
         set last_run_at = now(), last_status = $2, last_error = $3, updated_at = now()
@@ -65,8 +64,7 @@ async def execute_job(job_id: str) -> None:
 
 
 async def reload_jobs(scheduler: AsyncIOScheduler) -> None:
-    db = await pool()
-    rows = await db.fetch("select id, cron_expr, max_instances from cron_jobs where enabled = true")
+    rows = await fetch("select id, cron_expr, max_instances from cron_jobs where enabled = true")
     active_ids = {row["id"] for row in rows}
     for job in list(scheduler.get_jobs()):
         if job.id not in active_ids:
@@ -87,8 +85,7 @@ async def reload_jobs(scheduler: AsyncIOScheduler) -> None:
 
 
 async def run_queued_manual_jobs() -> None:
-    db = await pool()
-    rows = await db.fetch(
+    rows = await fetch(
         """
         select id, job_id
         from cron_runs
@@ -98,7 +95,7 @@ async def run_queued_manual_jobs() -> None:
         """
     )
     for row in rows:
-        await db.execute("delete from cron_runs where id = $1 and status = 'queued'", row["id"])
+        await execute("delete from cron_runs where id = $1 and status = 'queued'", row["id"])
         await execute_job(row["job_id"])
 
 

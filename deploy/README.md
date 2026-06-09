@@ -21,6 +21,24 @@ chmod +x start.sh stop.sh
 
 If `deploy/.env` already exists, `start.sh` appends any new keys added to `deploy/env/compose.env.sample` without overwriting your existing passwords, tokens, or API keys.
 
+## Update App Images Without Restarting PostgreSQL
+
+To update only the API, web, and scheduler containers:
+
+```bash
+cd deploy
+chmod +x update-services.sh
+./update-services.sh
+```
+
+`update-services.sh` pulls and applies only:
+
+- `stock2-api`
+- `stock2-web`
+- `stock2-scheduler`
+
+It intentionally does not pull, recreate, restart, or stop the `postgres` service. Docker Compose only recreates application containers when their configured image or container definition changed.
+
 ## Build Images Locally
 
 On a Linux machine with the source code:
@@ -58,9 +76,13 @@ Web page access is protected by default:
 WEB_AUTH_REQUIRED=true
 ```
 
-Unauthenticated users are redirected to `/login`. The first admin account is created from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when `stock2-api` starts.
+Unauthenticated users are redirected to `/login`. Business API routes are protected by the same session middleware, so knowing the frontend API URL is not enough to call execution endpoints directly. Cron endpoints are only allowed through `Authorization: Bearer ${CRON_SECRET}` and `CRON_SECRET=change-me` is treated as not configured when auth is enabled.
+
+The first admin account is created from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when `stock2-api` starts.
 
 The API service runs PostgreSQL migrations on startup. It does not execute Supabase Auth migrations that depend on `auth.uid()`.
+
+The Python API and APScheduler worker use an asyncpg connection pool. Database operations reset and recreate the pool once when they hit a reconnectable PostgreSQL connection error, so a PostgreSQL container restart may fail the in-flight request or job once but should recover on the next database operation without restarting the API or scheduler containers.
 
 ## Environment
 

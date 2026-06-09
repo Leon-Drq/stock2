@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { unstable_cache } from "next/cache"
 import { Database, FileUp, FlaskConical } from "lucide-react"
 import { PageMasthead, PageShell } from "@/components/shared/page-shell"
 import { StrategyPipelineStrip } from "@/components/strategies/strategy-pipeline-strip"
@@ -7,6 +6,7 @@ import { StrategyCandidateBoard } from "@/components/strategy-candidates/strateg
 import { StrategyLabClient } from "@/components/strategy-lab/strategy-lab-client"
 import { StrategyMinerDashboard } from "@/components/strategy-miner/strategy-miner-dashboard"
 import { getDefaultModelRuntime } from "@/lib/model-providers"
+import { getStrategyMinerConfig } from "@/lib/strategy-miner-config"
 import { compactStrategyMiningReport, runStrategyMining, type StrategyMiningReport } from "@/lib/strategy-miner"
 
 export const metadata = {
@@ -19,12 +19,6 @@ type SearchParams = Record<string, string | string[] | undefined>
 type StrategyResearchTab = "candidates" | "miner" | "lab"
 
 const STRATEGY_MINER_TIMEOUT_MS = 6_000
-
-const getCachedStrategyMiningReport = unstable_cache(
-  async () => compactStrategyMiningReport(await runStrategyMining({ persist: true, maxCandidates: 10, githubLimitPerQuery: 2 })),
-  ["strategy-miner:v1"],
-  { revalidate: 3600 },
-)
 
 const TABS: Array<{
   id: StrategyResearchTab
@@ -113,7 +107,17 @@ function StrategyResearchTabs({ activeTab }: { activeTab: StrategyResearchTab })
 
 async function getStrategyMiningReport(): Promise<StrategyMiningReport> {
   try {
-    return await withTimeout(getCachedStrategyMiningReport(), STRATEGY_MINER_TIMEOUT_MS)
+    const config = await getStrategyMinerConfig()
+    return await withTimeout(
+      runStrategyMining({
+        persist: true,
+        config,
+        maxCandidates: Math.min(config.maxCandidates, 10),
+        githubLimitPerQuery: Math.min(config.githubLimitPerQuery, 2),
+        immediateBacktestLimit: Math.min(config.immediateBacktestLimit, 8),
+      }).then(compactStrategyMiningReport),
+      STRATEGY_MINER_TIMEOUT_MS,
+    )
   } catch (error) {
     return fallbackStrategyMiningReport(error)
   }
@@ -137,7 +141,7 @@ function fallbackStrategyMiningReport(error: unknown): StrategyMiningReport {
     notes: [
       "策略矿工后台挖掘和批量回测耗时较长，本次首屏已切换为轻量状态，避免页面一直卡在加载。",
       `降级原因：${reason}`,
-      "后台 cron/refresh 会继续跑最多 28 个候选；可稍后刷新，或先到策略目录/真实回测查看已经入库的策略。",
+      "后台 cron/refresh 会按策略矿工配置继续执行；可稍后刷新，或先到策略目录/真实回测查看已经入库的策略。",
     ],
     store: { driver: "memory", persisted: false },
   }

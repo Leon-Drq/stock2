@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr
 
 from app.config import get_settings
-from app.db import pool
+from app.db import execute, fetch, fetchrow
 from app.deps import admin_user, current_user
 from app.security import new_session_token, session_expires_at, session_token_hash, verify_password
 
@@ -16,8 +16,7 @@ class LoginRequest(BaseModel):
 
 @router.post("/login")
 async def login(payload: LoginRequest, response: Response) -> dict:
-    db = await pool()
-    user = await db.fetchrow(
+    user = await fetchrow(
         "select id, email, password_hash, role, status from users where email = $1",
         payload.email.lower(),
     )
@@ -26,7 +25,7 @@ async def login(payload: LoginRequest, response: Response) -> dict:
 
     token = new_session_token()
     expires_at = session_expires_at()
-    await db.execute(
+    await execute(
         "insert into sessions (user_id, token_hash, expires_at) values ($1, $2, $3)",
         user["id"],
         session_token_hash(token),
@@ -46,8 +45,7 @@ async def login(payload: LoginRequest, response: Response) -> dict:
 
 @router.post("/logout")
 async def logout(response: Response, user: dict = Depends(current_user)) -> dict:
-    db = await pool()
-    await db.execute("update sessions set revoked_at = now() where user_id = $1 and revoked_at is null", user["id"])
+    await execute("update sessions set revoked_at = now() where user_id = $1 and revoked_at is null", user["id"])
     response.delete_cookie(get_settings().session_cookie_name)
     return {"ok": True}
 
@@ -59,6 +57,5 @@ async def session(user: dict = Depends(current_user)) -> dict:
 
 @router.get("/users")
 async def list_users(_: dict = Depends(admin_user)) -> dict:
-    db = await pool()
-    rows = await db.fetch("select id, email, role, status, created_at from users order by created_at desc limit 200")
+    rows = await fetch("select id, email, role, status, created_at from users order by created_at desc limit 200")
     return {"users": [dict(row) for row in rows]}

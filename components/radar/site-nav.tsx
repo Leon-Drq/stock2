@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { href: "/ops/cron", label: "定时任务调度", tag: "JOB", icon: CalendarClock },
   { href: "/discover", label: "Qveris 能力探针", tag: "Q", icon: Sparkles },
   { href: "/ops/model", label: "模型配置", tag: "AI", icon: Settings2 },
+  { href: "/strategy-research/miner/settings", label: "策略矿工配置", tag: "MINER", icon: Settings2 },
 ]
 
 const NAV_SECTIONS = [
@@ -65,7 +66,7 @@ const NAV_SECTIONS = [
   {
     label: "L2 策略流水线",
     eyebrow: "STRATEGY",
-    items: [NAV_ITEMS[4], NAV_ITEMS[5], NAV_ITEMS[6]],
+    items: [NAV_ITEMS[4], NAV_ITEMS[16], NAV_ITEMS[5], NAV_ITEMS[6]],
   },
   {
     label: "L3 雷达层",
@@ -355,5 +356,6 @@ function MobileNavLink({
 function isActive(pathname: string, href: string) {
   if (href === "/radar") return pathname === href
   if (href === "/ops") return pathname === href
+  if (href === "/strategy-research") return pathname === href
   return pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
 }
