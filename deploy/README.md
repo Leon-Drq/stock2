@@ -37,7 +37,10 @@ The Next.js app maps that value to `CRON_SECRET`.
 
 The GitHub Actions workflow builds:
 
-- `ghcr.io/leon-drq/stock2-web`
-- `ghcr.io/leon-drq/stock2-api`
+- `Docker Web Image`: builds `ghcr.io/leon-drq/stock2-web`
+- `Docker API Image`: builds `ghcr.io/leon-drq/stock2-api`
+- `Docker Compose`: validates and builds `stock2-web`, `stock2-api`, and `stock2-scheduler`
 
-Manual builds can choose `all`, `web`, or `api`.
+The scheduler reuses the API image and has no separate image.
+
+See `deploy/ARCHITECTURE.md` for container responsibilities and scheduler communication.
