@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   Bot,
+  CalendarClock,
   ChevronDown,
   ClipboardList,
   Database,
@@ -19,6 +20,7 @@ import {
   Radar,
   Radio,
   Search,
+  Settings2,
   Sparkles,
   TestTube2,
   WalletCards,
@@ -39,7 +41,9 @@ const NAV_ITEMS = [
   { href: "/market", label: "社区市场", tag: "BETA", icon: BarChart3 },
   { href: "/simulation", label: "实盘模拟", tag: "L5", icon: WalletCards },
   { href: "/ops", label: "运行中枢", tag: "OPS", icon: Radio },
+  { href: "/ops/cron", label: "定时任务调度", tag: "JOB", icon: CalendarClock },
   { href: "/discover", label: "Qveris 能力探针", tag: "Q", icon: Sparkles },
+  { href: "/ops/model", label: "模型配置", tag: "AI", icon: Settings2 },
 ]
 
 const NAV_SECTIONS = [
@@ -51,7 +55,7 @@ const NAV_SECTIONS = [
   {
     label: "L0 数据层",
     eyebrow: "DATA",
-    items: [NAV_ITEMS[1], NAV_ITEMS[13]],
+    items: [NAV_ITEMS[1], NAV_ITEMS[14]],
   },
   {
     label: "L1 因子层",
@@ -71,12 +75,12 @@ const NAV_SECTIONS = [
   {
     label: "L4 智能与市场",
     eyebrow: "AI / MARKET",
-    items: [NAV_ITEMS[9], NAV_ITEMS[10]],
+    items: [NAV_ITEMS[9], NAV_ITEMS[15], NAV_ITEMS[10]],
   },
   {
     label: "L5 模拟执行",
     eyebrow: "PAPER",
-    items: [NAV_ITEMS[11], NAV_ITEMS[12]],
+    items: [NAV_ITEMS[11], NAV_ITEMS[12], NAV_ITEMS[13]],
   },
 ]
 
@@ -350,5 +354,6 @@ function MobileNavLink({
 
 function isActive(pathname: string, href: string) {
   if (href === "/radar") return pathname === href
+  if (href === "/ops") return pathname === href
   return pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
 }

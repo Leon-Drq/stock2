@@ -19,7 +19,7 @@ import {
   Upload,
   X,
 } from "lucide-react"
-import type { ProviderId } from "@/lib/model-providers"
+import type { DefaultModelRuntime, ProviderId } from "@/lib/model-providers"
 import type { StrategyDraft, StrategyFactorMapping, StrategyLabMode } from "@/lib/strategy-lab"
 import {
   buildCustomFactorCandidates,
@@ -73,12 +73,14 @@ const MARKET_SAMPLE_TEXT = [
   "如果需要资金流、盘口、新闻或板块数据，请列出缺口。",
 ].join("\n")
 
-export function StrategyLabClient() {
+export function StrategyLabClient({ defaultModel }: { defaultModel?: DefaultModelRuntime }) {
   const [mode, setMode] = useState<StrategyLabMode>("market-observation")
-  const [provider, setProvider] = useState<ProviderId>("default")
+  const initialProvider = defaultModel?.provider ?? "default"
+  const initialPreset = PROVIDERS.find((item) => item.id === initialProvider) ?? PROVIDERS[0]
+  const [provider, setProvider] = useState<ProviderId>(initialProvider)
   const preset = useMemo(() => PROVIDERS.find((item) => item.id === provider) ?? PROVIDERS[0], [provider])
-  const [baseUrl, setBaseUrl] = useState(preset.baseUrl)
-  const [model, setModel] = useState(preset.model)
+  const [baseUrl, setBaseUrl] = useState(defaultModel?.baseUrl ?? initialPreset.baseUrl)
+  const [model, setModel] = useState(defaultModel?.model ?? initialPreset.model)
   const [apiKey, setApiKey] = useState("")
   const [title, setTitle] = useState("上涨样本因子挖掘")
   const [text, setText] = useState(MARKET_SAMPLE_TEXT)
@@ -377,7 +379,9 @@ export function StrategyLabClient() {
               <Settings2 className="size-3.5" aria-hidden />
               模型
             </p>
-            <span className="font-mono text-[10px] text-ink-faint">{preset.keyHint}</span>
+            <span className="font-mono text-[10px] text-ink-faint">
+              {provider === defaultModel?.provider ? defaultModel.keyHint : preset.keyHint}
+            </span>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {PROVIDERS.map((item) => (
@@ -416,7 +420,13 @@ export function StrategyLabClient() {
               onChange={(event) => setApiKey(event.target.value)}
               type="password"
               autoComplete="off"
-              placeholder={provider === "default" ? "留空使用平台默认模型" : `API Key，可留空使用服务端 ${preset.keyHint}`}
+              placeholder={
+                provider === defaultModel?.provider
+                  ? `API Key，可留空使用服务端 ${defaultModel.keyHint}`
+                  : provider === "default"
+                    ? "留空使用平台默认模型"
+                    : `API Key，可留空使用服务端 ${preset.keyHint}`
+              }
               disabled={usesPlatformDefaultModel}
               className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-ink outline-none placeholder:text-ink-faint disabled:text-ink-faint"
             />

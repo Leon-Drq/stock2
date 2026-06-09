@@ -12,6 +12,7 @@ import { getChinaMarketSession, shouldRunRadarScan } from "@/lib/cn-market-sessi
 import { computeUnifiedSignalScore, SIGNAL_SCORE_WEIGHTS, signalRankingScore, type UnifiedSignalScore } from "@/lib/signal-score"
 import { buildRadarConfluenceSignals, type RadarConfluenceSignal } from "@/lib/radar-confluence"
 import { loadTodayRadarSignalView, type TodayRadarSignalView } from "@/lib/signal-ledger-view"
+import { getDefaultModelRuntime } from "@/lib/model-providers"
 import { StockDiagnosisPanel } from "@/components/home/stock-diagnosis-panel"
 
 const FEATURED_BUY_SCORE_MIN = 62
@@ -388,6 +389,7 @@ function latestStockSignalDate(signals: StockSignal[]) {
 
 export async function TodayOpportunities() {
   const { report, diagnostics, paperConfluence, weeklyPaperConfluence, signalLedger, weeklySignalLedger } = await getTodayRadarReport()
+  const defaultModel = getDefaultModelRuntime()
   const marketSession = diagnostics.marketSession
   const tradeDate = marketSession.tradeDate
   const todayExitCandidates = recordsToExitRecordsForTradeDate(signalLedger, tradeDate)
@@ -499,7 +501,7 @@ export async function TodayOpportunities() {
         </div>
       )}
 
-      <StockDiagnosisPanel variant="cockpit" />
+      <StockDiagnosisPanel variant="cockpit" defaultModel={defaultModel} />
 
       <CockpitCommandGrid
         primary={primaryCandidate}

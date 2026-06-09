@@ -6,6 +6,7 @@ import { StrategyPipelineStrip } from "@/components/strategies/strategy-pipeline
 import { StrategyCandidateBoard } from "@/components/strategy-candidates/strategy-candidate-board"
 import { StrategyLabClient } from "@/components/strategy-lab/strategy-lab-client"
 import { StrategyMinerDashboard } from "@/components/strategy-miner/strategy-miner-dashboard"
+import { getDefaultModelRuntime } from "@/lib/model-providers"
 import { compactStrategyMiningReport, runStrategyMining, type StrategyMiningReport } from "@/lib/strategy-miner"
 
 export const metadata = {
@@ -55,6 +56,7 @@ export default async function StrategyResearchPage({ searchParams }: { searchPar
   const params = searchParams ? await searchParams : {}
   const activeTab = normalizeTab(firstParam(params, "tab"))
   const minerReport = activeTab === "miner" ? await getStrategyMiningReport() : null
+  const defaultModel = getDefaultModelRuntime()
 
   return (
     <PageShell width="wide">
@@ -73,7 +75,7 @@ export default async function StrategyResearchPage({ searchParams }: { searchPar
       {activeTab === "miner" && minerReport && <StrategyMinerDashboard report={minerReport} />}
       {activeTab === "lab" && (
         <div className="mt-5">
-          <StrategyLabClient />
+          <StrategyLabClient defaultModel={defaultModel} />
         </div>
       )}
     </PageShell>

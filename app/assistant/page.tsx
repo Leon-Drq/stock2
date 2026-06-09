@@ -1,5 +1,6 @@
 import { AssistantClient } from "@/components/assistant/assistant-client"
 import { PageMasthead, PageShell } from "@/components/shared/page-shell"
+import { getDefaultModelRuntime } from "@/lib/model-providers"
 
 export const metadata = {
   title: "AI 助手 — Stock Radar",
@@ -14,6 +15,8 @@ const EXAMPLES = [
 ]
 
 export default function AssistantPage() {
+  const defaultModel = getDefaultModelRuntime()
+
   return (
     <PageShell width="wide">
       <PageMasthead
@@ -24,7 +27,7 @@ export default function AssistantPage() {
       />
 
       <div className="mt-5 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_440px]">
-        <AssistantClient examples={EXAMPLES} compact />
+        <AssistantClient examples={EXAMPLES} compact defaultModel={defaultModel} />
 
         <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
           <section className="rounded-[7px] border border-rule bg-white px-4 py-4 md:px-5">

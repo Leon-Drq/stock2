@@ -1,10 +1,9 @@
 import { headers } from "next/headers"
-import Link from "next/link"
-import { ArrowRight, Bot, CalendarClock, KeyRound, ServerCog } from "lucide-react"
+import { Bot, KeyRound, ServerCog } from "lucide-react"
 import { StrategyRuntimeDashboard } from "@/components/ops/strategy-runtime-dashboard"
 import { PageMasthead, PageShell } from "@/components/shared/page-shell"
 import { resolveWithFallback } from "@/lib/async-timeout"
-import { PROVIDER_DEFAULTS } from "@/lib/model-providers"
+import { getDefaultModelRuntime } from "@/lib/model-providers"
 import { loadStrategyRuntimeSnapshot, type StrategyRuntimeSnapshot } from "@/lib/strategy-runtime"
 
 export const metadata = {
@@ -29,58 +28,23 @@ export default async function OpsPage() {
       />
       <AiModelRuntimeCard />
       <StrategyRuntimeDashboard snapshot={snapshot} />
-      <SchedulerLinkCard />
     </PageShell>
   )
 }
 
-function SchedulerLinkCard() {
-  return (
-    <section className="mt-5 rounded-[7px] border border-rule bg-white px-4 py-4 md:px-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 font-mono text-[11px] text-ink-muted">
-            <CalendarClock className="size-4" aria-hidden />
-            任务调度器
-          </div>
-          <h2 className="mt-1 text-[20px] font-semibold text-ink">定时任务调度</h2>
-          <p className="mt-2 max-w-[760px] text-[13px] leading-6 text-ink-muted">
-            定时任务的启停、执行周期、启用后立即执行和手动运行已拆到独立子页面，避免运行中枢页面承载过多配置操作。
-          </p>
-        </div>
-        <Link
-          href="/ops/cron"
-          className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-[7px] bg-ink px-4 font-mono text-[11px] text-white"
-        >
-          打开调度页面
-          <ArrowRight className="size-4" aria-hidden />
-        </Link>
-      </div>
-    </section>
-  )
-}
-
 function AiModelRuntimeCard() {
-  const provider = normalizeProvider(process.env.DEFAULT_MODEL_PROVIDER ?? process.env.MODEL_PROVIDER ?? process.env.AI_PROVIDER)
-  const preset = provider ? PROVIDER_DEFAULTS[provider] : PROVIDER_DEFAULTS.kimi
-  const baseUrl = process.env.DEFAULT_MODEL_BASE_URL || process.env.MODEL_BASE_URL || preset.baseUrl
-  const model = process.env.DEFAULT_MODEL_NAME || process.env.MODEL_NAME || preset.model
+  const runtime = getDefaultModelRuntime()
+  const baseUrl = runtime.baseUrl
+  const model = runtime.model
   const qverisModel = process.env.QVERIS_DEFAULT_MODEL || "gpt-4.1"
-  const hasDirectKey = Boolean(
-    process.env.MODEL_PROVIDER_KEY ||
-      process.env.DEFAULT_MODEL_API_KEY ||
-      process.env.MODEL_API_KEY ||
-      process.env[preset.envKey],
-  )
+  const hasDirectKey = runtime.keyConfigured
   const hasQverisDefault = Boolean(process.env.QVERIS_API_KEY)
   const ready = hasDirectKey || hasQverisDefault
-  const providerLabel = provider ?? "kimi"
+  const providerLabel = runtime.provider
   const modelLabel = hasDirectKey ? model : hasQverisDefault ? `${qverisModel} (Qveris fallback)` : model || "未配置"
   const baseUrlLabel = hasDirectKey ? baseUrl : hasQverisDefault ? "qveris://default-model-fallback" : baseUrl
   const keyLabel = hasDirectKey
-    ? process.env.MODEL_PROVIDER_KEY
-      ? "MODEL_PROVIDER_KEY 已配置"
-      : `${preset.envKey} 已配置`
+    ? `${runtime.keyHint} 已配置`
     : hasQverisDefault
       ? "QVERIS_API_KEY fallback 可用"
       : "未配置"
@@ -132,14 +96,6 @@ function AiConfigCell({
       <p className="mt-2 truncate text-[14px] font-semibold text-ink">{value}</p>
     </div>
   )
-}
-
-function normalizeProvider(value?: string) {
-  const normalized = value?.trim().toLowerCase()
-  if (normalized === "kimi" || normalized === "openai" || normalized === "deepseek" || normalized === "qwen") {
-    return normalized
-  }
-  return null
 }
 
 function maskUrl(value: string) {

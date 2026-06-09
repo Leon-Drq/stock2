@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { Bot, KeyRound, Loader2, Send, Settings2 } from "lucide-react"
-
-type ProviderId = "default" | "kimi" | "openai" | "deepseek" | "qwen" | "custom"
+import type { DefaultModelRuntime, ProviderId } from "@/lib/model-providers"
 
 type ProviderPreset = {
   id: ProviderId
@@ -70,11 +69,21 @@ type ChatResponse = {
   } | null
 }
 
-export function AssistantClient({ examples, compact = false }: { examples: string[]; compact?: boolean }) {
-  const [provider, setProvider] = useState<ProviderId>("default")
+export function AssistantClient({
+  examples,
+  compact = false,
+  defaultModel,
+}: {
+  examples: string[]
+  compact?: boolean
+  defaultModel?: DefaultModelRuntime
+}) {
+  const initialProvider = defaultModel?.provider ?? "default"
+  const initialPreset = PROVIDERS.find((p) => p.id === initialProvider) ?? PROVIDERS[0]
+  const [provider, setProvider] = useState<ProviderId>(initialProvider)
   const preset = useMemo(() => PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0], [provider])
-  const [baseUrl, setBaseUrl] = useState(preset.baseUrl)
-  const [model, setModel] = useState(preset.model)
+  const [baseUrl, setBaseUrl] = useState(defaultModel?.baseUrl ?? initialPreset.baseUrl)
+  const [model, setModel] = useState(defaultModel?.model ?? initialPreset.model)
   const [apiKey, setApiKey] = useState("")
   const [prompt, setPrompt] = useState(examples[0] ?? "")
   const [loading, setLoading] = useState(false)
@@ -165,7 +174,12 @@ export function AssistantClient({ examples, compact = false }: { examples: strin
           />
         </Field>
         <div className="md:col-span-2">
-          <Field label={`API Key（可留空，改用服务端 ${preset.keyHint}）`} icon={KeyRound}>
+          <Field
+            label={`API Key（可留空，改用服务端 ${
+              provider === defaultModel?.provider ? defaultModel.keyHint : preset.keyHint
+            }）`}
+            icon={KeyRound}
+          >
             <input
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
@@ -181,7 +195,9 @@ export function AssistantClient({ examples, compact = false }: { examples: strin
       <div className="mt-4 rounded-[7px] border border-rule bg-[#fafafa] p-4">
         <div className="flex items-center justify-between gap-3">
           <p className="font-mono text-[11px] text-ink-muted">对话区</p>
-          <span className="font-mono text-[11px] text-ink-faint">{preset.label} · {model || "未选择模型"}</span>
+          <span className="font-mono text-[11px] text-ink-faint">
+            {(provider === defaultModel?.provider ? "环境变量默认" : preset.label)} · {model || "未选择模型"}
+          </span>
         </div>
         <textarea
           rows={5}

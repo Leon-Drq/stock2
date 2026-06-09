@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { Bot, BrainCircuit, ChevronDown, LineChart, Loader2, Search, ShieldCheck, SlidersHorizontal } from "lucide-react"
 import { formatChinaDateTime } from "@/lib/format"
-import type { ProviderId } from "@/lib/model-providers"
+import type { DefaultModelRuntime, ProviderId } from "@/lib/model-providers"
 import type { StockDiagnosisFailure, StockDiagnosisResult, StockDiagnosisTone } from "@/lib/stock-diagnosis"
 
 type ProviderPreset = {
@@ -25,14 +25,22 @@ const PROVIDERS: ProviderPreset[] = [
 
 type DiagnosisApiResponse = StockDiagnosisResult | StockDiagnosisFailure
 
-export function StockDiagnosisPanel({ variant = "section" }: { variant?: "section" | "cockpit" }) {
+export function StockDiagnosisPanel({
+  variant = "section",
+  defaultModel,
+}: {
+  variant?: "section" | "cockpit"
+  defaultModel?: DefaultModelRuntime
+}) {
   const [query, setQuery] = useState("")
   const [question, setQuestion] = useState("")
   const [includeAi, setIncludeAi] = useState(true)
-  const [provider, setProvider] = useState<ProviderId>("default")
+  const initialProvider = defaultModel?.provider ?? "default"
+  const initialPreset = PROVIDERS.find((item) => item.id === initialProvider) ?? PROVIDERS[0]
+  const [provider, setProvider] = useState<ProviderId>(initialProvider)
   const preset = useMemo(() => PROVIDERS.find((item) => item.id === provider) ?? PROVIDERS[0], [provider])
-  const [baseUrl, setBaseUrl] = useState("")
-  const [model, setModel] = useState("")
+  const [baseUrl, setBaseUrl] = useState(defaultModel?.baseUrl ?? initialPreset.baseUrl)
+  const [model, setModel] = useState(defaultModel?.model ?? initialPreset.model)
   const [apiKey, setApiKey] = useState("")
   const [showModel, setShowModel] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -214,7 +222,13 @@ export function StockDiagnosisPanel({ variant = "section" }: { variant?: "sectio
             onChange={(event) => setApiKey(event.target.value)}
             disabled={provider === "default"}
             type="password"
-            placeholder={provider === "default" ? "留空使用平台默认模型" : `API Key，可留空使用服务端 ${preset.keyHint}`}
+            placeholder={
+              provider === defaultModel?.provider
+                ? `API Key，可留空使用服务端 ${defaultModel.keyHint}`
+                : provider === "default"
+                  ? "留空使用平台默认模型"
+                  : `API Key，可留空使用服务端 ${preset.keyHint}`
+            }
             className="mt-2 h-10 w-full rounded-[7px] border border-rule bg-white px-3 font-mono text-[12px] outline-none disabled:bg-[#f5f5f4] disabled:text-ink-faint"
           />
           <p className="mt-2 text-[11px] leading-5 text-ink-faint">

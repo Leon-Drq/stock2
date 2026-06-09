@@ -101,12 +101,12 @@ export function resolveModelConfig(config: ModelRequestConfig): ResolvedModelCon
 }
 
 export function getDefaultModelRuntime(): DefaultModelRuntime {
-  const provider = normalizeProviderName(
-    firstNonEmpty(process.env.DEFAULT_MODEL_PROVIDER, process.env.MODEL_PROVIDER, process.env.AI_PROVIDER),
-  ) ?? "kimi"
+  const configuredModel = firstNonEmpty(process.env.DEFAULT_MODEL_NAME, process.env.MODEL_NAME)
+  const configuredBaseUrl = firstNonEmpty(process.env.DEFAULT_MODEL_BASE_URL, process.env.MODEL_BASE_URL)
+  const provider = getDefaultProvider(configuredModel, configuredBaseUrl)
   const preset = PROVIDER_DEFAULTS[provider]
-  const baseUrl = normalizeBaseUrl(firstNonEmpty(process.env.DEFAULT_MODEL_BASE_URL, process.env.MODEL_BASE_URL, preset.baseUrl))
-  const model = firstNonEmpty(process.env.DEFAULT_MODEL_NAME, process.env.MODEL_NAME, preset.model)
+  const baseUrl = normalizeBaseUrl(firstNonEmpty(configuredBaseUrl, preset.baseUrl))
+  const model = firstNonEmpty(configuredModel, preset.model)
   const keyEntries: Array<[string, string | undefined]> = [
     ["MODEL_PROVIDER_KEY", process.env.MODEL_PROVIDER_KEY],
     ["DEFAULT_MODEL_API_KEY", process.env.DEFAULT_MODEL_API_KEY],
@@ -125,13 +125,19 @@ export function getDefaultModelRuntime(): DefaultModelRuntime {
 }
 
 function getDefaultModelPreset(): ModelProviderDefault {
-  const provider = normalizeProviderName(
-    firstNonEmpty(process.env.DEFAULT_MODEL_PROVIDER, process.env.MODEL_PROVIDER, process.env.AI_PROVIDER),
+  const provider = getDefaultProvider(
+    firstNonEmpty(process.env.DEFAULT_MODEL_NAME, process.env.MODEL_NAME),
+    firstNonEmpty(process.env.DEFAULT_MODEL_BASE_URL, process.env.MODEL_BASE_URL),
   )
-  if (provider && provider in PROVIDER_DEFAULTS) {
-    return PROVIDER_DEFAULTS[provider]
-  }
-  return PROVIDER_DEFAULTS.kimi
+  return PROVIDER_DEFAULTS[provider]
+}
+
+function getDefaultProvider(model?: string, baseUrl?: string): Exclude<ProviderId, "default" | "custom"> {
+  return normalizeProviderName(firstNonEmpty(process.env.DEFAULT_MODEL_PROVIDER, process.env.MODEL_PROVIDER, process.env.AI_PROVIDER)) ??
+    inferProviderFromModel(model) ??
+    inferProviderFromBaseUrl(baseUrl) ??
+    inferProviderFromKey() ??
+    "kimi"
 }
 
 function normalizeProviderName(value?: string): Exclude<ProviderId, "default" | "custom"> | null {
@@ -139,6 +145,34 @@ function normalizeProviderName(value?: string): Exclude<ProviderId, "default" | 
   if (normalized === "kimi" || normalized === "openai" || normalized === "deepseek" || normalized === "qwen") {
     return normalized
   }
+  return null
+}
+
+function inferProviderFromModel(value?: string): Exclude<ProviderId, "default" | "custom"> | null {
+  const model = value?.trim().toLowerCase()
+  if (!model) return null
+  if (model.startsWith("deepseek-")) return "deepseek"
+  if (model.startsWith("gpt-") || model.startsWith("o1") || model.startsWith("o3") || model.startsWith("o4")) return "openai"
+  if (model.startsWith("moonshot-") || model.startsWith("kimi-")) return "kimi"
+  if (model.startsWith("qwen-")) return "qwen"
+  return null
+}
+
+function inferProviderFromBaseUrl(value?: string): Exclude<ProviderId, "default" | "custom"> | null {
+  const url = value?.trim().toLowerCase()
+  if (!url) return null
+  if (url.includes("deepseek.com")) return "deepseek"
+  if (url.includes("openai.com")) return "openai"
+  if (url.includes("moonshot.cn")) return "kimi"
+  if (url.includes("dashscope.aliyuncs.com") || url.includes("aliyuncs.com")) return "qwen"
+  return null
+}
+
+function inferProviderFromKey(): Exclude<ProviderId, "default" | "custom"> | null {
+  if (process.env.DEEPSEEK_API_KEY?.trim()) return "deepseek"
+  if (process.env.OPENAI_API_KEY?.trim()) return "openai"
+  if (process.env.KIMI_API_KEY?.trim()) return "kimi"
+  if (process.env.QWEN_API_KEY?.trim()) return "qwen"
   return null
 }
 
