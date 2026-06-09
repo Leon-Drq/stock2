@@ -9,7 +9,7 @@
 - `stock2-scheduler`: Python 3.12 APScheduler worker. It reuses the `stock2-api` image but runs `python -m app.scheduler_worker`.
 - `postgres`: PostgreSQL 18.
 
-The Docker Compose deployment uses `10.15.11.0/24` by default and stores PostgreSQL data in `deploy/stockdb`.
+The Docker Compose deployment uses `10.15.11.0/24` by default and stores PostgreSQL data in `deploy/stockdb`, mounted at `/var/lib/postgresql` for PostgreSQL 18 compatibility.
 
 ## API and Scheduler Communication
 

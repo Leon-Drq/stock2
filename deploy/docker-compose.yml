@@ -11,7 +11,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - ./stockdb:/var/lib/postgresql/data
+      - ./stockdb:/var/lib/postgresql
     networks:
       - stock2-net
     healthcheck:

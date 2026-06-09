@@ -64,7 +64,7 @@ Defaults:
 - Web image: `ghcr.io/leon-drq/stock2-web:release-test`
 - API and scheduler image: `ghcr.io/leon-drq/stock2-api:release-test`
 - Docker network subnet: `10.15.11.0/24`
-- PostgreSQL data path: `deploy/stockdb`
+- PostgreSQL data path: `deploy/stockdb`, mounted to `/var/lib/postgresql` for PostgreSQL 18 compatibility
 
 Default model configuration:
 
@@ -82,6 +82,15 @@ Supported provider/model examples:
 - `qwen`: `qwen-plus`, `qwen-max`, `qwen-turbo`
 
 `MODEL_PROVIDER_KEY` is the preferred single key variable for the selected default provider. Legacy provider-specific variables such as `DEEPSEEK_API_KEY` and `OPENAI_API_KEY` remain supported as fallback.
+
+PostgreSQL 18+ requires the bind mount to be placed at `/var/lib/postgresql`, not `/var/lib/postgresql/data`. If you previously started with the old mount and have no production data yet, reset the local database directory before restarting:
+
+```bash
+cd deploy
+./stop.sh
+sudo rm -rf stockdb
+./start.sh
+```
 
 If PostgreSQL reports a permission problem on `stockdb`, run:
 
