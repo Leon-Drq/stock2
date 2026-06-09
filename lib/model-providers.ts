@@ -50,6 +50,14 @@ export type ResolvedModelConfig =
       status: number
     }
 
+export type DefaultModelRuntime = {
+  provider: Exclude<ProviderId, "default" | "custom">
+  baseUrl: string
+  model: string
+  keyHint: string
+  keyConfigured: boolean
+}
+
 export function resolveModelConfig(config: ModelRequestConfig): ResolvedModelConfig {
   const provider = config.provider ?? "default"
   const defaults = provider === "default" ? getDefaultModelPreset() : provider === "custom" ? null : PROVIDER_DEFAULTS[provider]
@@ -73,9 +81,9 @@ export function resolveModelConfig(config: ModelRequestConfig): ResolvedModelCon
   )
   const apiKey = firstNonEmpty(
     config.apiKey,
-    provider === "default" ? process.env.MODEL_PROVIDER_KEY : undefined,
-    provider === "default" ? process.env.DEFAULT_MODEL_API_KEY : undefined,
-    provider === "default" ? process.env.MODEL_API_KEY : undefined,
+    process.env.MODEL_PROVIDER_KEY,
+    process.env.DEFAULT_MODEL_API_KEY,
+    process.env.MODEL_API_KEY,
     defaults ? process.env[defaults.envKey] : undefined,
   )
 
@@ -90,6 +98,30 @@ export function resolveModelConfig(config: ModelRequestConfig): ResolvedModelCon
   }
 
   return { ok: true, provider, baseUrl, model, apiKey }
+}
+
+export function getDefaultModelRuntime(): DefaultModelRuntime {
+  const provider = normalizeProviderName(
+    firstNonEmpty(process.env.DEFAULT_MODEL_PROVIDER, process.env.MODEL_PROVIDER, process.env.AI_PROVIDER),
+  ) ?? "kimi"
+  const preset = PROVIDER_DEFAULTS[provider]
+  const baseUrl = normalizeBaseUrl(firstNonEmpty(process.env.DEFAULT_MODEL_BASE_URL, process.env.MODEL_BASE_URL, preset.baseUrl))
+  const model = firstNonEmpty(process.env.DEFAULT_MODEL_NAME, process.env.MODEL_NAME, preset.model)
+  const keyEntries: Array<[string, string | undefined]> = [
+    ["MODEL_PROVIDER_KEY", process.env.MODEL_PROVIDER_KEY],
+    ["DEFAULT_MODEL_API_KEY", process.env.DEFAULT_MODEL_API_KEY],
+    ["MODEL_API_KEY", process.env.MODEL_API_KEY],
+    [preset.envKey, process.env[preset.envKey]],
+  ]
+  const configured = keyEntries.find(([, value]) => Boolean(value?.trim()))
+
+  return {
+    provider,
+    baseUrl,
+    model,
+    keyHint: configured?.[0] ?? "MODEL_PROVIDER_KEY",
+    keyConfigured: Boolean(configured),
+  }
 }
 
 function getDefaultModelPreset(): ModelProviderDefault {

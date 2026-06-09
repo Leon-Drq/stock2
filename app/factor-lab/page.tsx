@@ -4,6 +4,7 @@ import { AIFactorLab } from "@/components/factors/ai-factor-lab"
 import { PageMasthead, PageShell } from "@/components/shared/page-shell"
 import { DATA_SOURCES, FACTORS } from "@/lib/catalog"
 import { buildFactorAssets, factorAssetSummary } from "@/lib/factor-assets"
+import { getDefaultModelRuntime } from "@/lib/model-providers"
 
 export const metadata = {
   title: "因子实验台 — Stock Radar",
@@ -12,6 +13,7 @@ export const metadata = {
 export default function FactorLabPage() {
   const assets = buildFactorAssets(FACTORS)
   const summary = factorAssetSummary(assets)
+  const defaultModel = getDefaultModelRuntime()
 
   return (
     <PageShell width="wide">
@@ -74,7 +76,7 @@ export default function FactorLabPage() {
         </div>
       </section>
 
-      <AIFactorLab />
+      <AIFactorLab defaultModel={defaultModel} />
 
       <section className="mt-5 rounded-[7px] border border-rule bg-white px-4 py-4 md:px-5">
         <div className="mb-4 flex items-center justify-between gap-3">

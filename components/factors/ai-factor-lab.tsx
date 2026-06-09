@@ -6,7 +6,7 @@ import { BrainCircuit, CheckCircle2, Clipboard, KeyRound, Loader2, PlusCircle, S
 import type { CustomFactor } from "@/lib/custom-factors"
 import { upsertCustomFactor } from "@/lib/custom-factors"
 import type { FactorDiscoveryCandidate } from "@/lib/factor-lab"
-import type { ProviderId } from "@/lib/model-providers"
+import type { DefaultModelRuntime, ProviderId } from "@/lib/model-providers"
 
 type DiscoverResponse = {
   source: "ai" | "heuristic"
@@ -42,11 +42,13 @@ const SAMPLE_IDEAS = [
   "新闻情绪转正，同时价格还没大涨",
 ]
 
-export function AIFactorLab({ onSaved }: { onSaved?: () => void }) {
-  const [provider, setProvider] = useState<ProviderId>("default")
+export function AIFactorLab({ onSaved, defaultModel }: { onSaved?: () => void; defaultModel?: DefaultModelRuntime }) {
+  const initialProvider = defaultModel?.provider ?? "default"
+  const initialPreset = PROVIDERS.find((item) => item.id === initialProvider) ?? PROVIDERS[0]
+  const [provider, setProvider] = useState<ProviderId>(initialProvider)
   const preset = useMemo(() => PROVIDERS.find((item) => item.id === provider) ?? PROVIDERS[0], [provider])
-  const [baseUrl, setBaseUrl] = useState(preset.baseUrl)
-  const [model, setModel] = useState(preset.model)
+  const [baseUrl, setBaseUrl] = useState(defaultModel?.baseUrl ?? initialPreset.baseUrl)
+  const [model, setModel] = useState(defaultModel?.model ?? initialPreset.model)
   const [apiKey, setApiKey] = useState("")
   const [idea, setIdea] = useState(SAMPLE_IDEAS[0])
   const [loading, setLoading] = useState(false)
@@ -144,7 +146,9 @@ export function AIFactorLab({ onSaved }: { onSaved?: () => void }) {
                 <Settings2 className="size-3.5" aria-hidden />
                 模型
               </p>
-              <span className="font-mono text-[10px] text-ink-faint">{preset.keyHint}</span>
+              <span className="font-mono text-[10px] text-ink-faint">
+                {provider === defaultModel?.provider ? defaultModel.keyHint : preset.keyHint}
+              </span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {PROVIDERS.map((item) => (
@@ -181,10 +185,19 @@ export function AIFactorLab({ onSaved }: { onSaved?: () => void }) {
                 onChange={(event) => setApiKey(event.target.value)}
                 type="password"
                 autoComplete="off"
-                placeholder={provider === "default" ? "留空使用平台默认模型" : `API Key，可留空使用服务端 ${preset.keyHint}`}
+                placeholder={
+                  provider === defaultModel?.provider
+                    ? `API Key，可留空使用服务端 ${defaultModel.keyHint}`
+                    : provider === "default"
+                      ? "留空使用平台默认模型"
+                      : `API Key，可留空使用服务端 ${preset.keyHint}`
+                }
                 className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-ink outline-none placeholder:text-ink-faint"
               />
             </label>
+            {provider === defaultModel?.provider && defaultModel.keyConfigured && (
+              <p className="mt-2 font-mono text-[10px] text-ink-faint">默认使用环境变量配置的模型</p>
+            )}
           </div>
           <button
             type="button"

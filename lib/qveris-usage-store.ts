@@ -148,7 +148,7 @@ let tableReady = false
 let tableUnavailable = false
 
 export async function recordQverisUsage(input: RecordUsageInput) {
-  if (!hasSharedPostgresConfig() || tableUnavailable) return false
+  if (!hasSharedPostgresConfig()) return false
   const summary = summarizeParameters(input.parameters, input.meta)
   const symbolsCount = input.meta?.symbolCount ?? inferSymbolCount(input.parameters, input.meta)
   const status = input.response ? (input.response.success ? "success" : "failure") : "exception"
@@ -299,14 +299,22 @@ async function writeUsageRow(input: RecordUsageInput & {
 
 async function ensureQverisUsageTable() {
   if (tableReady) return true
-  if (tableUnavailable || !hasSharedPostgresConfig()) return false
+  if (!hasSharedPostgresConfig()) return false
   try {
     const sql = await getSharedPostgresClient()
     try {
-      await sql`select id, parameters_summary from qveris_usage_ledger where false`
+      await checkQverisUsageTableSchema(sql)
       tableReady = true
+      tableUnavailable = false
       return true
     } catch (error) {
+      if (isUndefinedColumn(error)) {
+        await ensureQverisUsageTableMigrations(sql)
+        await checkQverisUsageTableSchema(sql)
+        tableReady = true
+        tableUnavailable = false
+        return true
+      }
       if (!isUndefinedTable(error)) throw error
     }
 
@@ -342,11 +350,59 @@ async function ensureQverisUsageTable() {
     await sql`create index if not exists qveris_usage_ledger_tool_idx on qveris_usage_ledger (tool_id, created_at desc)`
     await ensureBackendRls(sql, [TABLE])
     tableReady = true
+    tableUnavailable = false
     return true
   } catch {
     tableUnavailable = true
     return false
   }
+}
+
+async function checkQverisUsageTableSchema(sql: Sql) {
+  await sql`
+    select
+      id, execution_id, tool_id, search_id, session_id_hash, source, category, status, success,
+      started_at, finished_at, elapsed_time_ms, qveris_elapsed_time_ms, timeout_ms,
+      max_response_size, symbols_count, billing_credits, cost, billing_summary,
+      error_message, parameters_summary, created_at
+    from qveris_usage_ledger
+    where false
+  `
+}
+
+async function ensureQverisUsageTableMigrations(sql: Sql) {
+  await sql`alter table qveris_usage_ledger add column if not exists execution_id text`
+  await sql`alter table qveris_usage_ledger add column if not exists tool_id text`
+  await sql`alter table qveris_usage_ledger add column if not exists search_id text`
+  await sql`alter table qveris_usage_ledger add column if not exists session_id_hash text`
+  await sql`alter table qveris_usage_ledger add column if not exists source text not null default 'unknown'`
+  await sql`alter table qveris_usage_ledger add column if not exists category text not null default 'unknown'`
+  await sql`alter table qveris_usage_ledger add column if not exists status text not null default 'success'`
+  await sql`alter table qveris_usage_ledger add column if not exists success boolean not null default false`
+  await sql`alter table qveris_usage_ledger add column if not exists started_at timestamptz`
+  await sql`alter table qveris_usage_ledger add column if not exists finished_at timestamptz`
+  await sql`alter table qveris_usage_ledger add column if not exists elapsed_time_ms integer`
+  await sql`alter table qveris_usage_ledger add column if not exists qveris_elapsed_time_ms integer`
+  await sql`alter table qveris_usage_ledger add column if not exists timeout_ms integer`
+  await sql`alter table qveris_usage_ledger add column if not exists max_response_size integer`
+  await sql`alter table qveris_usage_ledger add column if not exists symbols_count integer not null default 0`
+  await sql`alter table qveris_usage_ledger add column if not exists billing_credits double precision`
+  await sql`alter table qveris_usage_ledger add column if not exists cost double precision`
+  await sql`alter table qveris_usage_ledger add column if not exists billing_summary text`
+  await sql`alter table qveris_usage_ledger add column if not exists error_message text`
+  await sql`alter table qveris_usage_ledger add column if not exists parameters_summary jsonb not null default '{}'::jsonb`
+  await sql`alter table qveris_usage_ledger add column if not exists created_at timestamptz not null default now()`
+  await sql`update qveris_usage_ledger set tool_id = 'unknown' where tool_id is null`
+  await sql`alter table qveris_usage_ledger alter column tool_id set not null`
+  await sql`update qveris_usage_ledger set started_at = coalesce(started_at, created_at, now()) where started_at is null`
+  await sql`update qveris_usage_ledger set finished_at = coalesce(finished_at, started_at, created_at, now()) where finished_at is null`
+  await sql`alter table qveris_usage_ledger alter column started_at set not null`
+  await sql`alter table qveris_usage_ledger alter column finished_at set not null`
+  await sql`create index if not exists qveris_usage_ledger_created_idx on qveris_usage_ledger (created_at desc)`
+  await sql`create index if not exists qveris_usage_ledger_category_idx on qveris_usage_ledger (category, created_at desc)`
+  await sql`create index if not exists qveris_usage_ledger_source_idx on qveris_usage_ledger (source, created_at desc)`
+  await sql`create index if not exists qveris_usage_ledger_tool_idx on qveris_usage_ledger (tool_id, created_at desc)`
+  await ensureBackendRls(sql, [TABLE])
 }
 
 function groupedQuery(sql: Sql, field: "category" | "source", from: Date) {
@@ -520,6 +576,11 @@ function errorMessageFrom(error: unknown) {
 function isUndefinedTable(error: unknown) {
   const err = error as { code?: string; message?: string }
   return err?.code === "42P01" || /does not exist|undefined_table/i.test(err?.message ?? "")
+}
+
+function isUndefinedColumn(error: unknown) {
+  const err = error as { code?: string; message?: string }
+  return err?.code === "42703" || /column .* does not exist|undefined_column/i.test(err?.message ?? "")
 }
 
 async function withTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs: number): Promise<T> {
