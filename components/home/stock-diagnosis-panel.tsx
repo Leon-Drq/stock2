@@ -18,7 +18,7 @@ const PROVIDERS: ProviderPreset[] = [
   { id: "default", label: "默认模型", baseUrl: "", model: "", keyHint: "平台内置" },
   { id: "kimi", label: "Kimi", baseUrl: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k", keyHint: "KIMI_API_KEY" },
   { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini", keyHint: "OPENAI_API_KEY" },
-  { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat", keyHint: "DEEPSEEK_API_KEY" },
+  { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-v4-flash", keyHint: "DEEPSEEK_API_KEY" },
   { id: "qwen", label: "通义千问", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus", keyHint: "QWEN_API_KEY" },
   { id: "custom", label: "自定义", baseUrl: "", model: "", keyHint: "MODEL_API_KEY" },
 ]

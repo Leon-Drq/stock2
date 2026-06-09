@@ -39,7 +39,7 @@ const PROVIDERS: ProviderPreset[] = [
     id: "deepseek",
     label: "DeepSeek",
     baseUrl: "https://api.deepseek.com/v1",
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     keyHint: "DEEPSEEK_API_KEY",
   },
   {

@@ -19,7 +19,7 @@ export const PROVIDER_DEFAULTS: Record<Exclude<ProviderId, "default" | "custom">
   },
   deepseek: {
     baseUrl: "https://api.deepseek.com/v1",
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     envKey: "DEEPSEEK_API_KEY",
   },
   qwen: {
