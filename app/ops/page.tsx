@@ -1,6 +1,6 @@
 import { headers } from "next/headers"
-import { Bot, KeyRound, ServerCog } from "lucide-react"
-import { CronControlPanel } from "@/components/ops/cron-control-panel"
+import Link from "next/link"
+import { ArrowRight, Bot, CalendarClock, KeyRound, ServerCog } from "lucide-react"
 import { StrategyRuntimeDashboard } from "@/components/ops/strategy-runtime-dashboard"
 import { PageMasthead, PageShell } from "@/components/shared/page-shell"
 import { resolveWithFallback } from "@/lib/async-timeout"
@@ -29,8 +29,34 @@ export default async function OpsPage() {
       />
       <AiModelRuntimeCard />
       <StrategyRuntimeDashboard snapshot={snapshot} />
-      <CronControlPanel showSessionActions={false} />
+      <SchedulerLinkCard />
     </PageShell>
+  )
+}
+
+function SchedulerLinkCard() {
+  return (
+    <section className="mt-5 rounded-[7px] border border-rule bg-white px-4 py-4 md:px-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-mono text-[11px] text-ink-muted">
+            <CalendarClock className="size-4" aria-hidden />
+            APScheduler
+          </div>
+          <h2 className="mt-1 text-[20px] font-semibold text-ink">定时任务调度</h2>
+          <p className="mt-2 max-w-[760px] text-[13px] leading-6 text-ink-muted">
+            定时任务的启停、cron 表达式、启用后立即执行和手动运行已拆到独立子页面，避免运行中枢页面承载过多配置操作。
+          </p>
+        </div>
+        <Link
+          href="/ops/cron"
+          className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-[7px] bg-ink px-4 font-mono text-[11px] text-white"
+        >
+          打开调度页面
+          <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      </div>
+    </section>
   )
 }
 
