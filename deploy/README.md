@@ -66,6 +66,23 @@ Defaults:
 - Docker network subnet: `10.15.11.0/24`
 - PostgreSQL data path: `deploy/stockdb`
 
+Default model configuration:
+
+```env
+MODEL_PROVIDER_KEY=your-provider-key
+DEFAULT_MODEL_PROVIDER=deepseek
+DEFAULT_MODEL_NAME=deepseek-v4-flash
+```
+
+Supported provider/model examples:
+
+- `deepseek`: `deepseek-v4-flash`, `deepseek-v4-pro`
+- `openai`: `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-4.1`
+- `kimi`: `moonshot-v1-8k`, `moonshot-v1-32k`, `moonshot-v1-128k`
+- `qwen`: `qwen-plus`, `qwen-max`, `qwen-turbo`
+
+`MODEL_PROVIDER_KEY` is the preferred single key variable for the selected default provider. Legacy provider-specific variables such as `DEEPSEEK_API_KEY` and `OPENAI_API_KEY` remain supported as fallback.
+
 If PostgreSQL reports a permission problem on `stockdb`, run:
 
 ```bash

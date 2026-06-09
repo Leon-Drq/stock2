@@ -73,6 +73,7 @@ export function resolveModelConfig(config: ModelRequestConfig): ResolvedModelCon
   )
   const apiKey = firstNonEmpty(
     config.apiKey,
+    provider === "default" ? process.env.MODEL_PROVIDER_KEY : undefined,
     provider === "default" ? process.env.DEFAULT_MODEL_API_KEY : undefined,
     provider === "default" ? process.env.MODEL_API_KEY : undefined,
     defaults ? process.env[defaults.envKey] : undefined,
