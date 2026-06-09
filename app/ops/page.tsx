@@ -1,5 +1,6 @@
 import { headers } from "next/headers"
 import { Bot, KeyRound, ServerCog } from "lucide-react"
+import { CronControlPanel } from "@/components/ops/cron-control-panel"
 import { StrategyRuntimeDashboard } from "@/components/ops/strategy-runtime-dashboard"
 import { PageMasthead, PageShell } from "@/components/shared/page-shell"
 import { resolveWithFallback } from "@/lib/async-timeout"
@@ -28,6 +29,7 @@ export default async function OpsPage() {
       />
       <AiModelRuntimeCard />
       <StrategyRuntimeDashboard snapshot={snapshot} />
+      <CronControlPanel />
     </PageShell>
   )
 }
@@ -36,14 +38,26 @@ function AiModelRuntimeCard() {
   const provider = normalizeProvider(process.env.DEFAULT_MODEL_PROVIDER ?? process.env.MODEL_PROVIDER ?? process.env.AI_PROVIDER)
   const preset = provider ? PROVIDER_DEFAULTS[provider] : PROVIDER_DEFAULTS.kimi
   const baseUrl = process.env.DEFAULT_MODEL_BASE_URL || process.env.MODEL_BASE_URL || preset.baseUrl
-  const directModel = process.env.DEFAULT_MODEL_NAME || process.env.MODEL_NAME || (provider ? preset.model : "")
+  const model = process.env.DEFAULT_MODEL_NAME || process.env.MODEL_NAME || preset.model
   const qverisModel = process.env.QVERIS_DEFAULT_MODEL || "gpt-4.1"
-  const hasDirectKey = Boolean(process.env.DEFAULT_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env[preset.envKey])
+  const hasDirectKey = Boolean(
+    process.env.MODEL_PROVIDER_KEY ||
+      process.env.DEFAULT_MODEL_API_KEY ||
+      process.env.MODEL_API_KEY ||
+      process.env[preset.envKey],
+  )
   const hasQverisDefault = Boolean(process.env.QVERIS_API_KEY)
   const ready = hasDirectKey || hasQverisDefault
-  const providerLabel = provider ?? (hasQverisDefault ? "Qveris 默认模型" : "未配置")
-  const modelLabel = hasDirectKey ? directModel : hasQverisDefault ? qverisModel : directModel || "未配置"
-  const baseUrlLabel = hasDirectKey ? baseUrl : hasQverisDefault ? "qveris://chat.completions" : baseUrl
+  const providerLabel = provider ?? "kimi"
+  const modelLabel = hasDirectKey ? model : hasQverisDefault ? `${qverisModel} (Qveris fallback)` : model || "未配置"
+  const baseUrlLabel = hasDirectKey ? baseUrl : hasQverisDefault ? "qveris://default-model-fallback" : baseUrl
+  const keyLabel = hasDirectKey
+    ? process.env.MODEL_PROVIDER_KEY
+      ? "MODEL_PROVIDER_KEY 已配置"
+      : `${preset.envKey} 已配置`
+    : hasQverisDefault
+      ? "QVERIS_API_KEY fallback 可用"
+      : "未配置"
 
   return (
     <section className="mt-5 rounded-[7px] border border-rule bg-white px-4 py-4 md:px-5">
@@ -55,7 +69,7 @@ function AiModelRuntimeCard() {
           </div>
           <h2 className="mt-1 text-[20px] font-semibold text-ink">个股诊断与 AI 解释模型</h2>
           <p className="mt-2 max-w-[820px] text-[13px] leading-6 text-ink-muted">
-            首页个股诊断默认使用这里的模型配置；未配置直接模型时，会走 Qveris 默认模型。用户也可以在诊断框里临时覆盖模型和 API Key，但不会保存密钥。
+            首页个股诊断默认使用这里的模型配置。优先读取 MODEL_PROVIDER_KEY；没有配置直接模型 Key 时，才会回退到 Qveris 默认模型。
           </p>
         </div>
         <span className={`w-fit rounded-[7px] border px-3 py-2 font-mono text-[11px] ${ready ? "border-[#b9dfc2] bg-[#eef8f0] text-health-ok" : "border-[#ead8b7] bg-[#fff8ed] text-[#8a5a16]"}`}>
@@ -65,7 +79,7 @@ function AiModelRuntimeCard() {
       <div className="mt-4 grid gap-2 md:grid-cols-3">
         <AiConfigCell icon={ServerCog} label="provider" value={providerLabel} />
         <AiConfigCell icon={Bot} label="model" value={modelLabel || "未配置"} />
-        <AiConfigCell icon={KeyRound} label="key" value={hasDirectKey ? "直接模型 Key 已配置" : hasQverisDefault ? "Qveris 默认模型可用" : "未配置"} />
+        <AiConfigCell icon={KeyRound} label="key" value={keyLabel} />
       </div>
       <div className="mt-2 rounded-[7px] border border-rule-soft bg-[#fafafa] px-3 py-2 font-mono text-[10px] text-ink-faint">
         base URL: {maskUrl(baseUrlLabel)}
