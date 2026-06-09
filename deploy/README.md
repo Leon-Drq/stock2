@@ -48,6 +48,14 @@ Open:
 - Cron configuration: http://localhost:3000/ops/cron
 - API health: http://localhost:8000/healthz
 
+Web page access is protected by default:
+
+```env
+WEB_AUTH_REQUIRED=true
+```
+
+Unauthenticated users are redirected to `/login`. The first admin account is created from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when `stock2-api` starts.
+
 The API service runs PostgreSQL migrations on startup. It does not execute Supabase Auth migrations that depend on `auth.uid()`.
 
 ## Environment

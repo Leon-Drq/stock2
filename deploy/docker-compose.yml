@@ -69,6 +69,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      WEB_AUTH_REQUIRED: ${WEB_AUTH_REQUIRED:-true}
       DATABASE_URL: postgresql://${POSTGRES_USER:-stock2}:${POSTGRES_PASSWORD:-stock2}@postgres:5432/${POSTGRES_DB:-stock2}
       QVERIS_API_KEY: ${QVERIS_API_KEY:-}
       MODEL_PROVIDER_KEY: ${MODEL_PROVIDER_KEY:-}
