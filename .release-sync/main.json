@@ -1,0 +1,12 @@
+{
+  "sourceBranch": "main",
+  "targetBranch": "release/test",
+  "lastMergedMainSha": "88b28c23787f5172536d7c92eaec56b778c44716",
+  "lastMergedAt": "2026-06-09",
+  "strategy": "merge-main-then-adapt",
+  "notes": [
+    "Keep stock business logic in Next.js to make future main merges cheap.",
+    "Keep Python control-plane changes under services/api.",
+    "Keep Docker deployment assets under deploy."
+  ]
+}

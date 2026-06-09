@@ -21,9 +21,8 @@ on:
     branches:
       - release/test
     paths:
-      - Dockerfile.web
-      - Dockerfile.api
-      - docker-compose*.yml
+      - deploy/**
+      - .dockerignore
       - package.json
       - pnpm-lock.yaml
       - next.config.mjs
@@ -53,9 +52,9 @@ jobs:
       matrix:
         include:
           - service: web
-            dockerfile: Dockerfile.web
+            dockerfile: deploy/Dockerfile.web
           - service: api
-            dockerfile: Dockerfile.api
+            dockerfile: deploy/Dockerfile.api
 
     steps:
       - name: Checkout

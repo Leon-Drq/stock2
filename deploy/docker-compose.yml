@@ -1,0 +1,88 @@
+name: stock2
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: stock2-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stock2}
+      POSTGRES_USER: ${POSTGRES_USER:-stock2}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stock2}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - stock2-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stock2} -d ${POSTGRES_DB:-stock2}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  stock2-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: stock2-api:release-test
+    container_name: stock2-api
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stock2}:${POSTGRES_PASSWORD:-stock2}@postgres:5432/${POSTGRES_DB:-stock2}
+      SESSION_SECRET: ${SESSION_SECRET:-change-me}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me}
+      INTERNAL_CRON_TOKEN: ${INTERNAL_CRON_TOKEN:-change-me}
+      NEXT_INTERNAL_BASE_URL: http://stock2-web:3000
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-change-me}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  stock2-scheduler:
+    image: stock2-api:release-test
+    container_name: stock2-scheduler
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    command: ["python", "-m", "app.scheduler_worker"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stock2}:${POSTGRES_PASSWORD:-stock2}@postgres:5432/${POSTGRES_DB:-stock2}
+      SESSION_SECRET: ${SESSION_SECRET:-change-me}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me}
+      INTERNAL_CRON_TOKEN: ${INTERNAL_CRON_TOKEN:-change-me}
+      NEXT_INTERNAL_BASE_URL: http://stock2-web:3000
+    depends_on:
+      stock2-api:
+        condition: service_healthy
+      stock2-web:
+        condition: service_started
+
+  stock2-web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    image: stock2-web:release-test
+    container_name: stock2-web
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stock2}:${POSTGRES_PASSWORD:-stock2}@postgres:5432/${POSTGRES_DB:-stock2}
+      QVERIS_API_KEY: ${QVERIS_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CRON_SECRET: ${INTERNAL_CRON_TOKEN:-change-me}
+      PYTHON_API_URL: http://stock2-api:8000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me}
+    depends_on:
+      stock2-api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+volumes:
+  stock2-postgres-data:
