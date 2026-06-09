@@ -168,7 +168,7 @@ export function CronControlPanel({ showSessionActions = true }: { showSessionAct
         <div className="max-w-[520px]">
           <div className="flex items-center gap-2 font-mono text-[11px] text-ink-muted">
             <ShieldCheck className="size-4" aria-hidden />
-            Admin session
+            管理员会话
           </div>
           <h2 className="mt-2 text-[20px] font-semibold text-ink">管理员登录</h2>
           <div className="mt-4 grid gap-3">
@@ -191,15 +191,15 @@ export function CronControlPanel({ showSessionActions = true }: { showSessionAct
         <div>
           <div className="flex items-center gap-2 font-mono text-[11px] text-ink-muted">
             <ShieldCheck className="size-4" aria-hidden />
-            APScheduler
+            任务调度器
           </div>
           <h2 className="mt-1 text-[20px] font-semibold text-ink">定时任务调度</h2>
           <p className="mt-1 max-w-[780px] text-[12px] leading-5 text-ink-muted">
-            保存配置会写入 cron 表达式、启停状态和启用后立即运行选项；立即运行只插入一次手动执行队列，不会改变任务配置。
+            保存配置会写入执行周期、启停状态和启用后立即运行选项；立即运行只插入一次手动执行队列，不会改变任务配置。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{enabledCount} enabled</Badge>
+          <Badge variant="outline">已启用 {enabledCount} 个</Badge>
           <Button variant="outline" size="sm" onClick={loadJobs}>
             <RefreshCw className="size-4" aria-hidden />
             刷新
@@ -219,10 +219,10 @@ export function CronControlPanel({ showSessionActions = true }: { showSessionAct
         <TableHeader>
           <TableRow>
             <TableHead className="px-4 md:px-5">任务</TableHead>
-            <TableHead>cron</TableHead>
-            <TableHead>启用</TableHead>
+            <TableHead>执行周期</TableHead>
+            <TableHead>是否启用</TableHead>
             <TableHead>启用后立即执行</TableHead>
-            <TableHead>上次状态</TableHead>
+            <TableHead>最近一次执行</TableHead>
             <TableHead className="text-right pr-4 md:pr-5">操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -233,8 +233,8 @@ export function CronControlPanel({ showSessionActions = true }: { showSessionAct
             return (
               <TableRow key={job.id}>
                 <TableCell className="px-4 md:px-5">
-                  <div className="font-medium text-ink">{job.name}</div>
-                  <div className="mt-1 font-mono text-[11px] text-ink-muted">{job.target_path}</div>
+                  <div className="font-medium text-ink">{displayJobName(job)}</div>
+                  <div className="mt-1 text-[11px] text-ink-muted">{displayTargetPath(job.target_path)}</div>
                 </TableCell>
                 <TableCell>
                   <Input
@@ -277,17 +277,54 @@ export function CronControlPanel({ showSessionActions = true }: { showSessionAct
 }
 
 function StatusBadge({ status }: { status: string | null }) {
-  if (!status) return <Badge variant="outline">never</Badge>
-  if (status === "success") return <Badge className="bg-health-ok text-white">success</Badge>
-  return <Badge variant="destructive">{status}</Badge>
+  if (!status) return <Badge variant="outline">尚未执行</Badge>
+  if (status === "success") return <Badge className="bg-health-ok text-white">执行成功</Badge>
+  if (status === "running") return <Badge variant="outline">执行中</Badge>
+  if (status === "queued") return <Badge variant="outline">等待执行</Badge>
+  if (status === "failed" || status === "failure" || status === "error") return <Badge variant="destructive">执行失败</Badge>
+  if (status === "timeout") return <Badge variant="destructive">执行超时</Badge>
+  if (status === "skipped") return <Badge variant="outline">已跳过</Badge>
+  return <Badge variant="destructive">未知状态：{status}</Badge>
 }
 
 function formatTime(value: string | null) {
-  if (!value) return "尚未执行"
+  if (!value) return "没有执行记录"
   return new Intl.DateTimeFormat("zh-CN", {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value))
+}
+
+function displayJobName(job: CronJob) {
+  return JOB_NAME_LABELS[job.id] ?? JOB_NAME_LABELS[job.name] ?? job.name
+}
+
+function displayTargetPath(targetPath: string) {
+  return TARGET_PATH_LABELS[targetPath] ?? `调用接口：${targetPath}`
+}
+
+const JOB_NAME_LABELS: Record<string, string> = {
+  "radar-cron": "雷达信号刷新",
+  "Radar refresh": "雷达信号刷新",
+  "radar-track": "雷达价格跟踪",
+  "Radar tracking": "雷达价格跟踪",
+  "paper-trading-cron": "模拟交易刷新",
+  "Paper trading refresh": "模拟交易刷新",
+  "backtest-data-cron": "回测数据预热",
+  "Backtest data warmup": "回测数据预热",
+  "strategy-miner-cron": "策略挖掘任务",
+  "Strategy miner": "策略挖掘任务",
+  "backtest-jobs-cron": "回测队列调度",
+  "Backtest jobs": "回测队列调度",
+}
+
+const TARGET_PATH_LABELS: Record<string, string> = {
+  "/api/radar/cron": "刷新雷达信号接口",
+  "/api/radar/track": "跟踪雷达持仓价格接口",
+  "/api/paper-trading/cron": "刷新模拟交易账户接口",
+  "/api/backtest-data/cron": "预热回测数据接口",
+  "/api/strategy-miner/cron": "挖掘候选策略接口",
+  "/api/backtest/jobs/cron": "推进回测任务队列接口",
 }
 
 async function errorMessage(response: Response, fallback: string) {

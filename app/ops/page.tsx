@@ -41,11 +41,11 @@ function SchedulerLinkCard() {
         <div className="min-w-0">
           <div className="flex items-center gap-2 font-mono text-[11px] text-ink-muted">
             <CalendarClock className="size-4" aria-hidden />
-            APScheduler
+            任务调度器
           </div>
           <h2 className="mt-1 text-[20px] font-semibold text-ink">定时任务调度</h2>
           <p className="mt-2 max-w-[760px] text-[13px] leading-6 text-ink-muted">
-            定时任务的启停、cron 表达式、启用后立即执行和手动运行已拆到独立子页面，避免运行中枢页面承载过多配置操作。
+            定时任务的启停、执行周期、启用后立即执行和手动运行已拆到独立子页面，避免运行中枢页面承载过多配置操作。
           </p>
         </div>
         <Link

@@ -30,12 +30,12 @@ create index if not exists cron_runs_job_started_idx on cron_runs (job_id, start
 
 insert into cron_jobs (id, name, target_path, cron_expr, enabled, timeout_seconds)
 values
-  ('radar-cron', 'Radar refresh', '/api/radar/cron', '*/5 1-6 * * 1-5', false, 240),
-  ('radar-track', 'Radar tracking', '/api/radar/track', '*/3 1-7 * * 1-5', false, 240),
-  ('paper-trading-cron', 'Paper trading refresh', '/api/paper-trading/cron', '5-59/10 1-7 * * 1-5', false, 240),
-  ('backtest-data-cron', 'Backtest data warmup', '/api/backtest-data/cron', '*/15 7-15 * * 1-5', false, 600),
-  ('strategy-miner-cron', 'Strategy miner', '/api/strategy-miner/cron', '30 8 * * 0', false, 600),
-  ('backtest-jobs-cron', 'Backtest jobs', '/api/backtest/jobs/cron', '15 9 * * 1-5', false, 600)
+  ('radar-cron', '雷达信号刷新', '/api/radar/cron', '*/5 1-6 * * 1-5', false, 240),
+  ('radar-track', '雷达价格跟踪', '/api/radar/track', '*/3 1-7 * * 1-5', false, 240),
+  ('paper-trading-cron', '模拟交易刷新', '/api/paper-trading/cron', '5-59/10 1-7 * * 1-5', false, 240),
+  ('backtest-data-cron', '回测数据预热', '/api/backtest-data/cron', '*/15 7-15 * * 1-5', false, 600),
+  ('strategy-miner-cron', '策略挖掘任务', '/api/strategy-miner/cron', '30 8 * * 0', false, 600),
+  ('backtest-jobs-cron', '回测队列调度', '/api/backtest/jobs/cron', '15 9 * * 1-5', false, 600)
 on conflict (id) do update set
   name = excluded.name,
   target_path = excluded.target_path,
