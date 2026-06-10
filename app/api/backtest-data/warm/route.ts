@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       pool,
       refresh: body.refresh === true || plan.refresh,
     })
-    const indexes = await fetchMarketIndexes().catch((error) => ({
+    const indexes = await fetchMarketIndexes({ refresh: body.refresh === true }).catch((error) => ({
       source: "unavailable" as const,
       fallbackReason: error instanceof Error ? error.message : "指数基准拉取失败",
     }))

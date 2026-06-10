@@ -12,8 +12,8 @@ const INDEX_FALLBACK_QUOTES: MarketIndexQuote[] = [
   { code: "000905", codeQveris: "000905.SH", name: "中证500", value: null, changePct: null },
 ]
 const getCachedMarketIndexes = unstable_cache(
-  async () => fetchMarketIndexes(),
-  ["home-market-indexes:v2"],
+  async () => fetchMarketIndexes({ refresh: true, timeoutMs: 2_200 }),
+  ["home-market-indexes:v3"],
   { revalidate: 300 },
 )
 

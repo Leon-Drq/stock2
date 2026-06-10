@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         refresh: refresh || plan.refresh,
       })
     : null
-  const indexes = await fetchMarketIndexes().catch((error) => ({
+  const indexes = await fetchMarketIndexes({ refresh: true }).catch((error) => ({
     source: "unavailable" as const,
     fallbackReason: error instanceof Error ? error.message : "指数基准拉取失败",
   }))
