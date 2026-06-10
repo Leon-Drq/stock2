@@ -6,6 +6,7 @@ import {
   saveMarketIndexQuotesToStore,
   type MarketIndexBarInput,
 } from "@/lib/backtest-data-store"
+import { getChinaMarketSession } from "@/lib/cn-market-session"
 import { formatChinaDate, formatChinaTime } from "@/lib/format"
 
 export type MarketIndexQuote = {
@@ -39,12 +40,34 @@ export type FetchMarketIndexesOptions = {
   timeoutMs?: number
 }
 
-const INDEXES = [
+export type MarketIndexQuoteDiagnostic = MarketIndexQuote & {
+  hasValue: boolean
+  stale: boolean
+  staleReasons: string[]
+}
+
+export type MarketIndexDiagnostics = {
+  checkedAt: string
+  expectedTradeDate: string
+  source: MarketIndexesResult["source"]
+  fetchedAt: string
+  cacheAgeMs: number
+  ttlMs: number
+  validCount: number
+  totalCount: number
+  staleCount: number
+  fallbackReason?: string
+  quotes: MarketIndexQuoteDiagnostic[]
+}
+
+export const MARKET_INDEX_SPECS = [
   { name: "上证指数", code: "000001", codeQveris: "000001.SH" },
   { name: "深证成指", code: "399001", codeQveris: "399001.SZ" },
   { name: "创业板指", code: "399006", codeQveris: "399006.SZ" },
   { name: "中证500", code: "000905", codeQveris: "000905.SH" },
-]
+] as const
+
+const INDEXES = MARKET_INDEX_SPECS
 
 const INDEX_CACHE_MS = 5 * 60_000
 const DISCOVER_CACHE_MS = 30 * 60_000
@@ -109,6 +132,24 @@ export async function fetchMarketIndexes(options: FetchMarketIndexesOptions = {}
   return live
 }
 
+export async function getMarketIndexDiagnostics(options: FetchMarketIndexesOptions = {}): Promise<MarketIndexDiagnostics> {
+  let result: MarketIndexesResult | null = null
+
+  if (options.refresh) {
+    result = await fetchMarketIndexes({ refresh: true, timeoutMs: options.timeoutMs })
+  } else if (indexCache) {
+    result = {
+      ...indexCache.result,
+      cacheAgeMs: Math.max(0, Date.now() - indexCache.cachedAt),
+    }
+  } else {
+    result = await loadLatestIndexQuotesFromStore()
+  }
+
+  result ??= unavailable("暂无市场指数缓存；可用 refresh=1 触发一次 Qveris 前台刷新。")
+  return buildMarketIndexDiagnostics(result)
+}
+
 async function fetchMarketIndexesFromQveris(timeoutMs: number): Promise<MarketIndexesResult> {
   if (!process.env.QVERIS_API_KEY) {
     return unavailable("QVERIS_API_KEY 未配置，未拉取指数行情")
@@ -140,16 +181,7 @@ async function fetchMarketIndexesFromQveris(timeoutMs: number): Promise<MarketIn
       return unavailable(friendlyQverisIndexError(res.error_message ?? "Qveris 指数行情调用失败"))
     }
 
-    const rows = flattenRows(res.result?.data)
-    const byCode = new Map<string, AnyRecord>()
-    for (const row of rows) {
-      const code = pickString(row, ["thscode", "stock_code", "index_code", "code", "symbol"])
-      if (code) {
-        for (const key of codeLookupKeys(code)) byCode.set(key, row)
-      }
-    }
-
-    const quotes = INDEXES.map((idx) => parseIndexQuote(idx, findIndexRow(byCode, idx)))
+    const quotes = parseMarketIndexQuotes(res.result?.data)
     const validCount = quotes.filter((q) => q.value != null).length
     if (validCount === 0) {
       return unavailable("Qveris 指数行情返回为空或不可解析")
@@ -429,6 +461,42 @@ function unavailable(fallbackReason: string): MarketIndexesResult {
   }
 }
 
+export function buildMarketIndexDiagnostics(
+  result: MarketIndexesResult,
+  expectedTradeDate = getChinaMarketSession().tradeDate,
+): MarketIndexDiagnostics {
+  const staleByFetchAge = result.cacheAgeMs > result.ttlMs * 2
+  const quotes = result.quotes.map((quote) => {
+    const staleReasons: string[] = []
+    if (quote.value == null) staleReasons.push("missing-value")
+    if (!quote.tradeDate) staleReasons.push("missing-trade-date")
+    else if (quote.tradeDate < expectedTradeDate) staleReasons.push(`trade-date-before-${expectedTradeDate}`)
+    if (staleByFetchAge) staleReasons.push("cache-age-exceeded")
+    if (result.source === "unavailable") staleReasons.push("source-unavailable")
+
+    return {
+      ...quote,
+      hasValue: quote.value != null,
+      stale: staleReasons.length > 0,
+      staleReasons,
+    }
+  })
+
+  return {
+    checkedAt: new Date().toISOString(),
+    expectedTradeDate,
+    source: result.source,
+    fetchedAt: result.fetchedAt,
+    cacheAgeMs: result.cacheAgeMs,
+    ttlMs: result.ttlMs,
+    validCount: quotes.filter((quote) => quote.hasValue).length,
+    totalCount: INDEXES.length,
+    staleCount: quotes.filter((quote) => quote.stale).length,
+    fallbackReason: result.fallbackReason,
+    quotes,
+  }
+}
+
 function parseIndexQuote(
   index: { name: string; code: string; codeQveris: string },
   row?: AnyRecord,
@@ -438,11 +506,24 @@ function parseIndexQuote(
   }
   return {
     ...index,
-    value: pickNumber(row, ["latest", "latest_price", "price", "close", "最新价"]),
-    changePct: pickNumber(row, ["changeRatio", "change_pct", "pct_chg", "涨跌幅"]),
+    value: pickNumber(row, ["latest", "latest_price", "latestPrice", "price", "close", "最新价"]),
+    changePct: pickNumber(row, ["changeRatio", "change_pct", "changePCT", "pct_chg", "涨跌幅"]),
     tradeDate: normalizeDate(pickString(row, ["tradeDate", "date", "交易日期"])),
     tradeTime: pickString(row, ["tradeTime", "time", "交易时间"])?.slice(-8),
   }
+}
+
+export function parseMarketIndexQuotes(data: unknown): MarketIndexQuote[] {
+  const rows = flattenRows(data)
+  const byCode = new Map<string, AnyRecord>()
+  for (const row of rows) {
+    const code = pickString(row, ["thscode", "stock_code", "stockCode", "index_code", "code", "symbol", "股票代码"])
+    if (code) {
+      for (const key of codeLookupKeys(code)) byCode.set(key, row)
+    }
+  }
+
+  return INDEXES.map((idx) => parseIndexQuote(idx, findIndexRow(byCode, idx)))
 }
 
 function findIndexRow(byCode: Map<string, AnyRecord>, index: { code: string; codeQveris: string }) {
@@ -464,7 +545,7 @@ function flattenRows(data: unknown): AnyRecord[] {
     if (typeof value !== "object") return
 
     const obj = value as AnyRecord
-    const hasCode = pickString(obj, ["thscode", "stock_code", "index_code", "code", "symbol"])
+    const hasCode = pickString(obj, ["thscode", "stock_code", "stockCode", "index_code", "code", "symbol", "股票代码"])
     const hasPrice = pickNumber(obj, ["latest", "latest_price", "latestPrice", "price", "close", "最新价"])
     if (hasCode && hasPrice != null) {
       rows.push(obj)
