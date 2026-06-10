@@ -45,6 +45,7 @@ const NAV_ITEMS = [
   { href: "/discover", label: "Qveris 能力探针", tag: "Q", icon: Sparkles },
   { href: "/ops/model", label: "模型配置", tag: "AI", icon: Settings2 },
   { href: "/strategy-research/miner/settings", label: "策略矿工配置", tag: "MINER", icon: Settings2 },
+  { href: "/ops/stock-pool", label: "股票池配置", tag: "POOL", icon: Settings2 },
 ]
 
 const NAV_SECTIONS = [
@@ -81,7 +82,7 @@ const NAV_SECTIONS = [
   {
     label: "L5 模拟执行",
     eyebrow: "PAPER",
-    items: [NAV_ITEMS[11], NAV_ITEMS[12], NAV_ITEMS[13]],
+    items: [NAV_ITEMS[11], NAV_ITEMS[12], NAV_ITEMS[13], NAV_ITEMS[17]],
   },
 ]
 

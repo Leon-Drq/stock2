@@ -2,8 +2,9 @@ import { getChinaMarketSession } from "@/lib/cn-market-session"
 import { fetchLatestQuotes, type LatestQuote } from "@/lib/qveris-quotes"
 import { loadStockBarsBatchFromStore } from "@/lib/backtest-data-store"
 import { loadRadarSignalHistoryRecordsForTradeDate } from "@/lib/radar-signal-store"
-import { getScanUniverse, isInScanUniverse, normalizeSymbol } from "@/lib/scan-universe"
+import { getRuntimeScanUniverse, isInScanUniverse, normalizeSymbol } from "@/lib/scan-universe"
 import { findStock, type StockPoolItem } from "@/lib/stock-pool"
+import { getRuntimeStockPool } from "@/lib/stock-pool-config"
 
 export type MissedMoveAuditItem = {
   symbol: string
@@ -69,10 +70,14 @@ const NAME_ALIASES: Record<string, string> = {
 
 export async function buildMissedMoveAudit(input: string): Promise<MissedMoveAuditReport> {
   const marketSession = getChinaMarketSession()
-  const universe = getScanUniverse("miss-audit")
+  const [universe, stockPool] = await Promise.all([
+    getRuntimeScanUniverse("miss-audit"),
+    getRuntimeStockPool(),
+  ])
   const targets = parseAuditTargets(input)
+  const stockLookup = new Map(stockPool.map((stock) => [stock.symbol, stock]))
   const stockTargets = targets.map((target) => {
-    const known = findStock(target.symbol)
+    const known = stockLookup.get(target.symbol) ?? findStock(target.symbol)
     return known ?? guessStock(target)
   })
   const scanTargets = stockTargets.filter((stock) => isInScanUniverse(stock.symbol, universe))
@@ -85,7 +90,7 @@ export async function buildMissedMoveAudit(input: string): Promise<MissedMoveAud
 
   const items: MissedMoveAuditItem[] = stockTargets.map((stock) => {
     const original = targets.find((target) => target.symbol === stock.symbol)
-    const inStockPool = Boolean(findStock(stock.symbol))
+    const inStockPool = stockLookup.has(stock.symbol) || Boolean(findStock(stock.symbol))
     const inScanUniverse = isInScanUniverse(stock.symbol, universe)
     const hasHistory = history.has(stock.symbol)
     const quote = quotes?.quotes.get(stock.symbol)

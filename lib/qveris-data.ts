@@ -14,6 +14,7 @@
 import { call, discover, type QverisTool } from "@/lib/qveris"
 import { formatChinaDate } from "@/lib/format"
 import { STOCK_POOL, type StockPoolItem } from "@/lib/stock-pool"
+import { getRuntimeStockPool } from "@/lib/stock-pool-config"
 import { loadStockBarsBatchFromStore, saveStockBarsBatchToStore, saveStockBarsToStore } from "@/lib/backtest-data-store"
 
 export type Bar = {
@@ -512,7 +513,7 @@ export async function fetchPoolBars(opts: {
   databaseOnly?: boolean
 }): Promise<FetchBarsResult> {
   const startedAt = new Date().toISOString()
-  const pool = opts.pool ?? STOCK_POOL
+  const pool = opts.pool ?? await getRuntimeStockPool().catch(() => STOCK_POOL)
   const lookbackDays = Math.max(30, Math.min(opts.lookbackDays, 750))
   const cacheKey = `${opts.useReal ? "real" : "mock"}:${opts.databaseOnly ? "database-only" : "fill-missing"}:${lookbackDays}:${pool
     .map((s) => s.symbolQveris)

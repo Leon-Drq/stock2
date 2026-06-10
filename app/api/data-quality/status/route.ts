@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getMarketDataQualitySnapshot } from "@/lib/backtest-data-store"
 import { fetchLatestQuotes } from "@/lib/qveris-quotes"
 import { STOCK_POOL } from "@/lib/stock-pool"
+import { getRuntimeStockPool } from "@/lib/stock-pool-config"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -9,7 +10,8 @@ export const dynamic = "force-dynamic"
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const includeRealtime = url.searchParams.get("realtime") === "1"
-  const realtimeSamplePool = includeRealtime ? STOCK_POOL.slice(0, 5) : []
+  const stockPool = includeRealtime ? await getRuntimeStockPool().catch(() => STOCK_POOL) : STOCK_POOL
+  const realtimeSamplePool = includeRealtime ? stockPool.slice(0, 5) : []
   const quality = await getMarketDataQualitySnapshot()
   const quotes = includeRealtime
     ? await fetchLatestQuotes(realtimeSamplePool, { discoverTimeoutMs: 2_000, callTimeoutMs: 5_000 })

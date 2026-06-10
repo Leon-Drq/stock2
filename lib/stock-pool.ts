@@ -17,7 +17,7 @@ export type StockPoolItem = {
 
 export const STOCK_POOL_TARGET_SIZE = 500
 
-type Exchange = "SH" | "SZ"
+export type Exchange = "SH" | "SZ"
 
 function stock(symbol: string, exchange: Exchange, name: string, industry: string): StockPoolItem {
   return {
@@ -178,12 +178,13 @@ const INACTIVE_SYMBOLS = new Set([
   "601989", // 中国重工，2025 换股吸收合并进入停牌/终止上市流程，Qveris 无后续日线。
 ])
 
-export const STOCK_POOL: StockPoolItem[] = dedupeStockPool([
+export const BASE_STOCK_POOL: StockPoolItem[] = dedupeStockPool([
   ...CORE_STOCK_POOL,
   ...MARKET_CAP_EXPANSION_POOL,
 ])
   .filter((stock) => !INACTIVE_SYMBOLS.has(stock.symbol))
-  .slice(0, STOCK_POOL_TARGET_SIZE)
+
+export const STOCK_POOL: StockPoolItem[] = BASE_STOCK_POOL.slice(0, STOCK_POOL_TARGET_SIZE)
 
 export function findStock(symbol: string): StockPoolItem | undefined {
   return STOCK_POOL.find((s) => s.symbol === symbol || s.symbolQveris === symbol)

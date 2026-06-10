@@ -1,5 +1,6 @@
 import { getMarketDataQualitySnapshot } from "@/lib/backtest-data-store"
 import { STOCK_POOL, type StockPoolItem } from "@/lib/stock-pool"
+import { getRuntimeStockPool } from "@/lib/stock-pool-config"
 
 export type BacktestWarmMode = "missing" | "offset"
 
@@ -26,12 +27,13 @@ export async function buildBacktestWarmPlan({
   limit?: number
 }): Promise<BacktestWarmPlan> {
   const safeLimit = Math.max(1, Math.min(50, Math.floor(limit) || 10))
-  const safeOffset = Math.max(0, Math.min(STOCK_POOL.length - 1, Math.floor(offset) || 0))
+  const stockPool = await getRuntimeStockPool().catch(() => STOCK_POOL)
+  const safeOffset = Math.max(0, Math.min(stockPool.length - 1, Math.floor(offset) || 0))
 
   if (mode === "offset") {
     return {
       mode,
-      pool: STOCK_POOL.slice(safeOffset, safeOffset + safeLimit),
+      pool: stockPool.slice(safeOffset, safeOffset + safeLimit),
       offset: safeOffset,
       limit: safeLimit,
       refresh: false,
@@ -43,8 +45,8 @@ export async function buildBacktestWarmPlan({
   const quality = await getMarketDataQualitySnapshot()
   const missingSymbols = new Set(quality.missingSymbols.map((stock) => stock.symbol))
   const staleSymbols = new Set(quality.staleSymbols.map((stock) => stock.symbol))
-  const missingPool = STOCK_POOL.filter((stock) => missingSymbols.has(stock.symbol))
-  const stalePool = STOCK_POOL.filter((stock) => !missingSymbols.has(stock.symbol) && staleSymbols.has(stock.symbol))
+  const missingPool = stockPool.filter((stock) => missingSymbols.has(stock.symbol))
+  const stalePool = stockPool.filter((stock) => !missingSymbols.has(stock.symbol) && staleSymbols.has(stock.symbol))
 
   if (missingPool.length) {
     const pool = missingPool.slice(0, safeLimit)
@@ -80,7 +82,7 @@ export async function buildBacktestWarmPlan({
 
   return {
     mode: "offset",
-    pool: STOCK_POOL.slice(safeOffset, safeOffset + safeLimit),
+    pool: stockPool.slice(safeOffset, safeOffset + safeLimit),
     offset: safeOffset,
     limit: safeLimit,
     refresh: false,

@@ -1,4 +1,5 @@
 import { STOCK_POOL, STOCK_POOL_TARGET_SIZE, type StockPoolItem } from "@/lib/stock-pool"
+import { getRuntimeStockPool } from "@/lib/stock-pool-config"
 
 export type ScanUniverseScope = "backtest" | "radar" | "paper" | "miss-audit"
 
@@ -54,6 +55,23 @@ export function getScanUniverse(scope: ScanUniverseScope = "radar", options: { t
   }
 }
 
+export async function getRuntimeScanUniverse(scope: ScanUniverseScope = "radar", options: { targetSize?: number } = {}): Promise<ScanUniverse> {
+  const stockPool = await getRuntimeStockPool()
+  const targetSize = scanUniverseTargetSize(scope, options.targetSize, stockPool)
+  const stocks = stockPool.slice(0, targetSize)
+  return {
+    id: DEFAULT_SCAN_UNIVERSE_ID,
+    label: DEFAULT_SCAN_UNIVERSE_LABEL,
+    scope,
+    stocks,
+    targetSize,
+    stockPoolSize: stockPool.length,
+    note: targetSize < stockPool.length
+      ? `共用统一股票池和技术面准入规则；${scopeLabel(scope)}实时窗口扫描前 ${targetSize}/${stockPool.length} 只。`
+      : "回测、策略雷达、实盘模拟和漏报复盘共用完整技术面扫描池；信号仍由价格、成交量、趋势和风控规则触发。",
+  }
+}
+
 export function isInScanUniverse(symbol: string, universe = getScanUniverse()) {
   const normalized = normalizeSymbol(symbol)
   return universe.stocks.some((stock) => stock.symbol === normalized)
@@ -93,14 +111,14 @@ export function buildScanUniverseDiagnostics({
   }
 }
 
-function scanUniverseTargetSize(scope: ScanUniverseScope, explicitTargetSize?: number) {
+function scanUniverseTargetSize(scope: ScanUniverseScope, explicitTargetSize?: number, stockPool: StockPoolItem[] = STOCK_POOL) {
   if (explicitTargetSize != null && Number.isFinite(explicitTargetSize)) {
-    return Math.max(30, Math.min(STOCK_POOL.length, Math.floor(explicitTargetSize)))
+    return Math.max(30, Math.min(stockPool.length, Math.floor(explicitTargetSize)))
   }
   const raw = envSizeForScope(scope)
   const parsed = raw ? Number(raw) : defaultSizeForScope(scope)
-  if (!Number.isFinite(parsed)) return Math.min(STOCK_POOL_TARGET_SIZE, STOCK_POOL.length)
-  return Math.max(30, Math.min(STOCK_POOL.length, Math.floor(parsed)))
+  if (!Number.isFinite(parsed)) return Math.min(STOCK_POOL_TARGET_SIZE, stockPool.length)
+  return Math.max(30, Math.min(stockPool.length, Math.floor(parsed)))
 }
 
 function envSizeForScope(scope: ScanUniverseScope) {

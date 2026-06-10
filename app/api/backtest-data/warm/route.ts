@@ -4,7 +4,6 @@ import { buildBacktestWarmPlan, type BacktestWarmMode } from "@/lib/backtest-dat
 import { fetchMarketIndexes } from "@/lib/market-indexes"
 import { fetchPoolBars } from "@/lib/qveris-data"
 import { enforceRateLimit } from "@/lib/rate-limit"
-import { STOCK_POOL } from "@/lib/stock-pool"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -22,7 +21,7 @@ export async function POST(request: Request) {
       mode?: BacktestWarmMode
     }
     const limit = Math.max(1, Math.min(25, Number(body.limit) || 10))
-    const offset = Math.max(0, Math.min(STOCK_POOL.length - 1, Number(body.offset) || 0))
+    const offset = Math.max(0, Number(body.offset) || 0)
     const plan = await buildBacktestWarmPlan({
       mode: body.mode === "offset" ? "offset" : "missing",
       offset,

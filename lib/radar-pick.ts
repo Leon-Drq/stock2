@@ -28,7 +28,7 @@ import type {
 import { fallbackReport, buyPointLabel } from "@/lib/radar-data"
 import { runFactor, type FactorResult, type StockFactorSnapshot } from "@/lib/factors/engine"
 import { STOCK_POOL, type StockPoolItem } from "@/lib/stock-pool"
-import { buildScanUniverseDiagnostics, getScanUniverse, type ScanUniverseDiagnostics } from "@/lib/scan-universe"
+import { buildScanUniverseDiagnostics, getRuntimeScanUniverse, type ScanUniverseDiagnostics } from "@/lib/scan-universe"
 import { selectRadarPrefilterUniverse, type RadarPrefilterDiagnostics } from "@/lib/radar-prefilter"
 import { computeTechSnapshot } from "@/lib/technicals"
 import { judgeBuyPoint } from "@/lib/buy-point-engine"
@@ -238,7 +238,7 @@ export async function buildRadarReport(opts: BuildOptions): Promise<{
     skipped: strategySelections.skipped,
   }
   const activeStrategy = strategySelection.strategy
-  const baseScanUniverse = getScanUniverse("radar", { targetSize: opts.scanTargetSize })
+  const baseScanUniverse = await getRuntimeScanUniverse("radar", { targetSize: opts.scanTargetSize })
   const prefilterLimit = numberEnv("RADAR_DEEP_SCAN_TOP_N", numberEnv("RADAR_PREFILTER_TOP_N", 80))
   const prefilter = await prefilterRadarPool(baseScanUniverse.stocks, prefilterLimit, opts.useReal)
   const radarPool = prefilter.stocks

@@ -2,6 +2,7 @@ import { fetchPoolBars, type Bar, type StockBars } from "@/lib/qveris-data"
 import { STRATEGIES, STRATEGY_CATALOG_MIN_ANNUAL_RETURN, type Strategy, type StrategyAdmission } from "@/lib/catalog"
 import { RADAR_STRATEGY, type StrategyFactorId } from "@/lib/strategy-registry"
 import { STOCK_POOL } from "@/lib/stock-pool"
+import { getRuntimeStockPool } from "@/lib/stock-pool-config"
 import type { StrategyDraft } from "@/lib/strategy-lab"
 import {
   buildFactorDataPlanForDraft,
@@ -168,10 +169,11 @@ type SplitValidation = {
 const barIndexCache = new WeakMap<StockBars, Map<string, Bar>>()
 
 export async function runDefaultBacktest(): Promise<BacktestReport> {
+  const stockPool = await getRuntimeStockPool().catch(() => STOCK_POOL)
   const fetched = await fetchPoolBars({
     lookbackDays: BACKTEST_LOOKBACK_DAYS,
     useReal: true,
-    pool: STOCK_POOL,
+    pool: stockPool,
     databaseOnly: true,
   })
   const stocks = fetched.stocks.filter((stock) => stock.bars.length >= MOMENTUM_WINDOW + 10)
@@ -352,10 +354,11 @@ export async function runStrategyBacktestReportsForStrategies(
   strategies: Strategy[],
   options: { notes?: string[] } = {},
 ): Promise<StrategyBacktestReports> {
+  const stockPool = await getRuntimeStockPool().catch(() => STOCK_POOL)
   const fetched = await fetchPoolBars({
     lookbackDays: BACKTEST_LOOKBACK_DAYS,
     useReal: true,
-    pool: STOCK_POOL,
+    pool: stockPool,
     databaseOnly: true,
   })
   const source =
@@ -409,10 +412,11 @@ export async function runStrategyBacktestReportsForStrategies(
 }
 
 export async function runCustomDraftBacktest(draft: StrategyDraft): Promise<BacktestReport> {
+  const stockPool = await getRuntimeStockPool().catch(() => STOCK_POOL)
   const fetched = await fetchPoolBars({
     lookbackDays: BACKTEST_LOOKBACK_DAYS,
     useReal: true,
-    pool: STOCK_POOL,
+    pool: stockPool,
     databaseOnly: true,
   })
   const source =
@@ -443,10 +447,11 @@ export async function runCustomDraftBacktest(draft: StrategyDraft): Promise<Back
 }
 
 export async function runStrategyCatalogBacktests(): Promise<StrategyCatalogBacktest> {
+  const stockPool = await getRuntimeStockPool().catch(() => STOCK_POOL)
   const fetched = await fetchPoolBars({
     lookbackDays: BACKTEST_LOOKBACK_DAYS,
     useReal: true,
-    pool: STOCK_POOL,
+    pool: stockPool,
     databaseOnly: true,
   })
   const source =
