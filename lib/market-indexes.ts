@@ -29,6 +29,16 @@ export type MarketIndexesResult = {
   toolName?: string
 }
 
+export type FetchMarketIndexesOptions = {
+  /**
+   * Bypass database-first reads and attempt a foreground Qveris refresh.
+   * Use this for cron/manual refresh paths where a background promise may be
+   * dropped before it updates the shared cache.
+   */
+  refresh?: boolean
+  timeoutMs?: number
+}
+
 const INDEXES = [
   { name: "上证指数", code: "000001", codeQveris: "000001.SH" },
   { name: "深证成指", code: "399001", codeQveris: "399001.SZ" },
@@ -60,9 +70,9 @@ let historyCache: { cachedAt: number; rows: number; error?: string } | null = nu
 let liveRefreshInFlight: Promise<MarketIndexesResult> | null = null
 let liveRefreshStartedAt = 0
 
-export async function fetchMarketIndexes(): Promise<MarketIndexesResult> {
+export async function fetchMarketIndexes(options: FetchMarketIndexesOptions = {}): Promise<MarketIndexesResult> {
   const now = Date.now()
-  if (indexCache && now - indexCache.cachedAt < INDEX_CACHE_MS) {
+  if (!options.refresh && indexCache && now - indexCache.cachedAt < INDEX_CACHE_MS) {
     void fetchAndSaveMarketIndexHistory().catch(() => undefined)
     return {
       ...indexCache.result,
@@ -70,15 +80,33 @@ export async function fetchMarketIndexes(): Promise<MarketIndexesResult> {
     }
   }
 
-  const cached = await loadLatestIndexQuotesFromStore()
-  if (cached) {
-    indexCache = { result: cached, cachedAt: Date.now() }
-    void fetchAndSaveMarketIndexHistory().catch(() => undefined)
-    refreshLiveIndexesInBackground()
-    return cached
+  if (!options.refresh) {
+    const cached = await loadLatestIndexQuotesFromStore()
+    if (cached) {
+      indexCache = { result: cached, cachedAt: Date.now() }
+      void fetchAndSaveMarketIndexHistory().catch(() => undefined)
+      refreshLiveIndexesInBackground()
+      return cached
+    }
   }
 
-  return fetchMarketIndexesFromQveris(LIVE_QUOTE_TIMEOUT_MS)
+  const live = await fetchMarketIndexesFromQveris(options.timeoutMs ?? LIVE_QUOTE_TIMEOUT_MS)
+  if (live.source === "qveris") return live
+
+  const cached = await loadLatestIndexQuotesFromStore()
+  if (cached) {
+    const fallbackReason = [
+      live.fallbackReason,
+      cached.fallbackReason,
+      "当前先展示最近一次数据库缓存，后台刷新接口恢复后会覆盖。",
+    ].filter(Boolean).join("；")
+    const result = { ...cached, fallbackReason }
+    indexCache = { result, cachedAt: Date.now() }
+    void fetchAndSaveMarketIndexHistory().catch(() => undefined)
+    return result
+  }
+
+  return live
 }
 
 async function fetchMarketIndexesFromQveris(timeoutMs: number): Promise<MarketIndexesResult> {
@@ -116,10 +144,12 @@ async function fetchMarketIndexesFromQveris(timeoutMs: number): Promise<MarketIn
     const byCode = new Map<string, AnyRecord>()
     for (const row of rows) {
       const code = pickString(row, ["thscode", "stock_code", "index_code", "code", "symbol"])
-      if (code) byCode.set(normalizeCode(code), row)
+      if (code) {
+        for (const key of codeLookupKeys(code)) byCode.set(key, row)
+      }
     }
 
-    const quotes = INDEXES.map((idx) => parseIndexQuote(idx, byCode.get(normalizeCode(idx.codeQveris))))
+    const quotes = INDEXES.map((idx) => parseIndexQuote(idx, findIndexRow(byCode, idx)))
     const validCount = quotes.filter((q) => q.value != null).length
     if (validCount === 0) {
       return unavailable("Qveris 指数行情返回为空或不可解析")
@@ -415,13 +445,38 @@ function parseIndexQuote(
   }
 }
 
-function flattenRows(data: unknown): AnyRecord[] {
-  if (!Array.isArray(data)) return []
-  const rows: unknown[] = []
-  for (const item of data) {
-    if (Array.isArray(item)) rows.push(...item)
-    else rows.push(item)
+function findIndexRow(byCode: Map<string, AnyRecord>, index: { code: string; codeQveris: string }) {
+  for (const key of codeLookupKeys(index.codeQveris, index.code)) {
+    const row = byCode.get(key)
+    if (row) return row
   }
+}
+
+function flattenRows(data: unknown): AnyRecord[] {
+  const rows: unknown[] = []
+
+  function visit(value: unknown, depth: number) {
+    if (depth > 6 || value == null) return
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1)
+      return
+    }
+    if (typeof value !== "object") return
+
+    const obj = value as AnyRecord
+    const hasCode = pickString(obj, ["thscode", "stock_code", "index_code", "code", "symbol"])
+    const hasPrice = pickNumber(obj, ["latest", "latest_price", "latestPrice", "price", "close", "最新价"])
+    if (hasCode && hasPrice != null) {
+      rows.push(obj)
+      return
+    }
+
+    for (const key of ["rows", "items", "list", "data", "result"]) {
+      if (key in obj) visit(obj[key], depth + 1)
+    }
+  }
+
+  visit(data, 0)
   return rows.filter((row): row is AnyRecord => Boolean(row) && typeof row === "object")
 }
 
@@ -496,6 +551,18 @@ function dateDaysAgo(days: number) {
 
 function normalizeCode(code: string) {
   return code.trim().toUpperCase().replace(/^SH\./, "").replace(/^SZ\./, "")
+}
+
+function codeLookupKeys(...codes: Array<string | undefined>) {
+  const keys = new Set<string>()
+  for (const code of codes) {
+    if (!code) continue
+    const normalized = normalizeCode(code)
+    keys.add(normalized)
+    keys.add(normalized.replace(/\.(SH|SZ|BJ)$/, ""))
+    keys.add(normalized.replace(/^(SH|SZ|BJ)/, ""))
+  }
+  return Array.from(keys).filter(Boolean)
 }
 
 function normalizeDate(date?: string) {
