@@ -44,7 +44,7 @@ const HANGSENG_QUOTE_TOOL_ID = "hangseng_polysource.a_shares_live_quote.query.v2
 const QUOTE_CACHE_MS = 60_000
 const DISCOVER_CACHE_MS = 30 * 60_000
 const DISCOVER_FAIL_CACHE_MS = 30_000
-const MAX_QUOTE_CODES_PER_CALL = 10
+const MAX_QUOTE_CODES_PER_CALL = 30
 
 type DiscoverCache = {
   tool?: QverisTool
